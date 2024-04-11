@@ -36,5 +36,4 @@ public interface ITrie<TNode, TValue> : ITrie<TNode> where TNode: INode<TNode, T
     /// <param name="prefix">The <see cref="string"/> to match; if <see langword="null"/>: all words are returned</param>
     /// <returns>An <see cref="IEnumerable{TValue}"/></returns>
     IEnumerable<TValue?> GetValues(string? prefix);
-
 }

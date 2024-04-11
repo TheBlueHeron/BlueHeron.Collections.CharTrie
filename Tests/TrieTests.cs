@@ -6,13 +6,11 @@ namespace BlueHeron.Collections.Trie.Tests;
 public class TestTrie
 {
     [TestMethod]
-    public void CreateAndValidateTree()
+    public void CreateAndValidate()
     {
-        Trie trie;
         var numWords = 0; // should be set to 2
         var woordeIsWord = true; // should be set to false
-        trie = CreateTestTrie();
-
+        var trie = Create();
         var totalWords = trie.NumWords;
         var blExistsWoo = trie.Exists("woo", true);
 
@@ -31,9 +29,9 @@ public class TestTrie
     }
 
     [TestMethod]
-    public void TestRemoval()
+    public void Removal()
     {
-        var trie = CreateTestTrie();
+        var trie = Create();
 
         trie.RemovePrefix("woo");
         Debug.Assert(trie.NumWords == 3);
@@ -42,9 +40,9 @@ public class TestTrie
     }
 
     [TestMethod]
-    public void TestTraversal()
+    public void Traversal()
     {
-        var trie =  CreateTestTrie();
+        var trie =  Create();
         var words = trie.GetWords(null);
 
         Debug.Assert(words != null && words.ToList().Count == 5);
@@ -57,7 +55,7 @@ public class TestTrie
     /// Creates a <see cref="Trie"/> with 5 test words.
     /// </summary>
     /// <returns>A <see cref="Trie"/></returns>
-    private static Trie CreateTestTrie()
+    private static Trie Create()
     {
         var tree = new Trie();
 
@@ -75,18 +73,18 @@ public class TestTrie
 public class TestTrieMap
 {
     [TestMethod]
-    public void CreateAndValidateTree()
+    public void CreateAndValidate()
     {
-        var trie = CreateTestTrie();
+        var trie = Create();
         var totalWords = trie.NumWords;        
 
         Debug.Assert(totalWords == 5);
     }
 
     [TestMethod]
-    public void TestTraversal()
+    public void Traversal()
     {
-        var trie = CreateTestTrie();
+        var trie = Create();
         var values = trie.GetValues(null).ToList();
         var blExistsVal = trie.Exists(3); // should exist
 
@@ -106,7 +104,7 @@ public class TestTrieMap
     /// Creates a <see cref="TrieMap{Int32}"/> with 5 test words.
     /// </summary>
     /// <returns>A <see cref="TrieMap{Int32}"/></returns>
-    private static TrieMap<MapNode<int>, int> CreateTestTrie()
+    private static TrieMap<MapNode<int>, int> Create()
     {
         var tree = new TrieMap<MapNode<int>, int>();
 
@@ -124,7 +122,7 @@ public class TestTrieMap
 public class ExtensionsTests
 {
     [TestMethod]
-    public void GuidTests()
+    public void GuidConversion()
     {
         var guid = Guid.NewGuid();
         var stringified = guid.ToWord();
