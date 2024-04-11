@@ -32,6 +32,13 @@ public interface ITrie<TNode> where TNode : INode<TNode>, new()
     bool Exists(string word, bool isPrefix);
 
     /// <summary>
+    /// Tries to retrieve all words that match the given pattern of characters.
+    /// </summary>
+    /// <param name="pattern">The pattern of characters to match. A null value matches all characters at that depth</param>
+    /// <returns>An <see cref="IEnumerable{string}"/> containing all words that match the pattern</returns>
+    IEnumerable<string> Find(char?[] pattern);
+
+    /// <summary>
     /// Gets the <typeparamref name="TNode"/> in this <see cref="ITrie{TNode}"/> that represents the given prefix, if it exists. Else <see langword="null"/>.
     /// </summary>
     /// <param name="prefix">The <see cref="string"/> to match</param>

@@ -50,6 +50,19 @@ public class TrieMap<TNode, TValue> : Trie<TNode>, ITrie<TNode, TValue> where TN
     }
 
     /// <summary>
+    /// Tries to retrieve all <see cref="TValue"/>s that match the given pattern of characters.
+    /// </summary>
+    /// <param name="pattern">The pattern of characters to match. A null value matches all characters at that depth</param>
+    /// <returns>An <see cref="IEnumerable{TValue}"/> containing the value of all nodes that match the pattern</returns>
+    public IEnumerable<TValue?> FindValue(char?[] pattern)
+    {
+        foreach (var value in Find(Root, pattern, new StringBuilder()))
+        {
+            yield return value;
+        }
+    }
+
+    /// <summary>
     /// Gets the <see cref="TValue"/> carried by the given word.
     /// </summary>
     /// <param name="word">The <see cref="string"/> to match</param>
@@ -107,6 +120,39 @@ public class TrieMap<TNode, TValue> : Trie<TNode>, ITrie<TNode, TValue> where TN
     #endregion
 
     #region Private methods and functions
+
+    /// <summary>
+    /// Tries to retrieve all values that match the given pattern of characters starting from the given node.
+    /// </summary>
+    /// <param name="node">The <see cref="TNode"/> to start from</param>
+    /// <param name="pattern">The pattern to match</param>
+    /// <param name="buffer">The <see cref="StringBuilder"/> to (re-)use</param>
+    /// <returns>An <see cref="IEnumerable{TValue?}"/></returns>
+    private IEnumerable<TValue?> Find(TNode node, char?[] pattern, StringBuilder buffer)
+    {
+        if (pattern.Length == 0)
+        {
+            foreach (var value in GetValues(buffer.ToString()))
+            {
+                yield return value;
+            }
+        }
+        else
+        {
+            var curChar = pattern[0];
+            var childPattern = pattern.Skip(1).ToArray();
+            var childNodes = curChar == null ? node.Children : node.Children.Where(kv => kv.Key == curChar);
+            foreach (var child in childNodes)
+            {
+                buffer.Append(child.Key);
+                foreach (var word in Find(child.Value, childPattern, buffer))
+                {
+                    yield return word;
+                }
+                buffer.Length--;
+            }
+        }
+    }
 
     /// <summary>
     /// Returns the first word that carries the given <see cref="TValue"/>, starting from the given node.

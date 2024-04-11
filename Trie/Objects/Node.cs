@@ -8,12 +8,12 @@ public class Node : NodeBase<Node>
 {
     #region Fields
 
-    private readonly Dictionary<char, Node> mChildren = [];
+    private readonly RobinHoodDictionary<char, Node> mChildren = [];
 
     #endregion
 
     /// <inheritdoc/>
-    public override Dictionary<char, Node> Children  => mChildren;
+    public override IDictionary<char, Node> Children  => mChildren;
 
     /// <inheritdoc/>
     internal override Node Me => this;

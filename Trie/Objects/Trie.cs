@@ -75,6 +75,19 @@ public class Trie<TNode> : ITrie<TNode> where TNode : INode<TNode>, new()
     }
 
     /// <summary>
+    /// Tries to retrieve all words that match the given pattern of characters.
+    /// </summary>
+    /// <param name="pattern">The pattern of characters to match. A null value matches all characters at that depth</param>
+    /// <returns>An <see cref="IEnumerable{string}"/> containing all words that match the pattern</returns>
+    public IEnumerable<string> Find(char?[] pattern)
+    {
+        foreach (var word in Find(Root, pattern, new StringBuilder()))
+        {
+            yield return word;
+        }
+    }
+
+    /// <summary>
     /// Gets the <see cref="TNode"/> in this <see cref="Trie{TNode}"/> that represents the given prefix, if it exists. Else <see langword="null"/>.
     /// </summary>
     /// <param name="prefix">The <see cref="string"/> to match</param>
@@ -181,6 +194,39 @@ public class Trie<TNode> : ITrie<TNode> where TNode : INode<TNode>, new()
             }
         }
         return nodes;
+    }
+
+    /// <summary>
+    /// Tries to retrieve all words that match the given pattern of characters starting from the given node.
+    /// </summary>
+    /// <param name="node">The <see cref="TNode"/> to start from</param>
+    /// <param name="pattern">The pattern to match</param>
+    /// <param name="buffer">The <see cref="StringBuilder"/> to (re-)use</param>
+    /// <returns>An <see cref="IEnumerable{string}"/></returns>
+    private IEnumerable<string> Find(TNode node, char?[] pattern, StringBuilder buffer)
+    {
+        if (pattern.Length == 0)
+        {
+            foreach (var word in GetWords(buffer.ToString()))
+            {
+                yield return word;
+            }
+        }
+        else
+        {
+            var curChar = pattern[0];
+            var childPattern = pattern.Skip(1).ToArray();
+            var childNodes = curChar == null ? node.Children : node.Children.Where(kv => kv.Key == curChar);
+            foreach (var child in childNodes)
+            {
+                buffer.Append(child.Key);
+                foreach (var word in Find(child.Value, childPattern, buffer))
+                {
+                    yield return word;
+                }
+                buffer.Length--;
+            }
+        }
     }
 
     /// <summary>

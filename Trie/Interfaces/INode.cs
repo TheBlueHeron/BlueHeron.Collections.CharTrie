@@ -20,7 +20,7 @@ public interface INode<TNode> where TNode : INode<TNode>, new()
     /// <summary>
     /// Gets the collection of <see cref="INode{TNode}"/>s that immediately follow this <see cref="INode{TNode}"/>.
     /// </summary>
-    Dictionary<char, TNode> Children { get; }
+    IDictionary<char, TNode> Children { get; }
 
     /// <summary>
     /// Removes all child <see cref="INode{TNode}"/>s from this <see cref="INode{TNode}"/>.

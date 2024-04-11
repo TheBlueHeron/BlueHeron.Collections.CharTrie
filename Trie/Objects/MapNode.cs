@@ -10,14 +10,14 @@ public sealed class MapNode<TValue> : NodeBase<MapNode<TValue>>, INode<MapNode<T
 {
     #region Fields
 
-    private readonly Dictionary<char, MapNode<TValue>> mChildren = [];
+    private readonly RobinHoodDictionary<char, MapNode<TValue>> mChildren = [];
 
     #endregion
 
     #region Properties
 
     /// <inheritdoc/>
-    public override Dictionary<char, MapNode<TValue>> Children => mChildren;
+    public override IDictionary<char, MapNode<TValue>> Children => mChildren;
 
     /// <inheritdoc/>
     internal override MapNode<TValue> Me => this;
@@ -28,12 +28,4 @@ public sealed class MapNode<TValue> : NodeBase<MapNode<TValue>>, INode<MapNode<T
     public TValue? Value { get; set; }
 
     #endregion
-
-    #region Public methods and functions
-
-    
-
-    #endregion
-
-
 }

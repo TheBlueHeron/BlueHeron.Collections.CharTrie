@@ -11,7 +11,7 @@ public abstract class NodeBase<TNode> : INode<TNode> where TNode : INode<TNode>,
     /// <summary>
     /// Gets the collection of <see cref="TNode"/>s that immediately follow this <see cref="INode{TNode}"/>.
     /// </summary>
-    public abstract Dictionary<char, TNode> Children { get; }
+    public abstract IDictionary<char, TNode> Children { get; }
 
     /// <summary>
     /// Determines whether this <see cref="TNode"/> finishes a word.

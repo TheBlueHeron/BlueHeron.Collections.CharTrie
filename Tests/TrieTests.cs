@@ -51,8 +51,24 @@ public class TestTrie
         Debug.Assert(words != null && words.ToList().Count == 2);
     }
 
+    [TestMethod]
+    public void Find()
+    {
+        var trie = Create();
+        IEnumerable<string> words;
+        
+        words = trie.Find(['w']);
+        Debug.Assert(words.Count() == 3);
+        words = trie.Find(['w', 'o']);
+        Debug.Assert(words.Count() == 2);
+        words = trie.Find([null, 'o']);
+        Debug.Assert(words.Count() == 3);
+        words = trie.Find([null, 'o', null, 'o']);
+        Debug.Assert(words.Count() == 1);
+    }
+
     /// <summary>
-    /// Creates a <see cref="Trie"/> with 5 test words.
+    /// Creates a <see cref="Trie"/> with 5 test values.
     /// </summary>
     /// <returns>A <see cref="Trie"/></returns>
     private static Trie Create()
@@ -100,8 +116,24 @@ public class TestTrieMap
         Debug.Assert(word == "zijn");
     }
 
+    [TestMethod]
+    public void Find()
+    {
+        var trie = Create();
+        IEnumerable<int> values;
+
+        values = trie.FindValue(['w']);
+        Debug.Assert(values.Count() == 3);
+        values = trie.FindValue(['w', 'o']);
+        Debug.Assert(values.Count() == 2);
+        values = trie.FindValue([null, 'o']);
+        Debug.Assert(values.Count() == 3);
+        values = trie.FindValue([null, 'o', null, 'o']);
+        Debug.Assert(values.Count() == 1);
+    }
+
     /// <summary>
-    /// Creates a <see cref="TrieMap{Int32}"/> with 5 test words.
+    /// Creates a <see cref="TrieMap{Int32}"/> with 5 test values.
     /// </summary>
     /// <returns>A <see cref="TrieMap{Int32}"/></returns>
     private static TrieMap<MapNode<int>, int> Create()

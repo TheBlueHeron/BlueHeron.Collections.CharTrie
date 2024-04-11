@@ -21,4 +21,7 @@
 		<IsAotCompatible>True</IsAotCompatible>
 		<Optimize>true</Optimize>
 	</PropertyGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\..\BlueHeron.Collections.RobinHoodMap\BlueHeron.Collections.RobinHoodDictionary.csproj" />
+	</ItemGroup>
 </Project>

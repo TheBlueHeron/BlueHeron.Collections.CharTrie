@@ -24,6 +24,13 @@ public interface ITrie<TNode, TValue> : ITrie<TNode> where TNode: INode<TNode, T
     bool Exists(TValue value);
 
     /// <summary>
+    /// Tries to retrieve all <see cref="TValue">s that match the given pattern of characters.
+    /// </summary>
+    /// <param name="pattern">The pattern of characters to match. A null value matches all characters at that depth</param>
+    /// <returns>An <see cref="IEnumerable{TValue}"/> containing the value of all nodes that match the pattern</returns>
+    IEnumerable<TValue?> FindValue(char?[] pattern);
+
+    /// <summary>
     /// Gets the <see cref="TValue"/> carried by the given word.
     /// </summary>
     /// <param name="word">The <see cref="string"/> to match</param>
