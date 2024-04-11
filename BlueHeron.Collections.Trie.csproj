@@ -9,6 +9,8 @@
 		<PackageTags>Trie, Tree, Collection</PackageTags>
 		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
 		<AnalysisLevel>latest-recommended</AnalysisLevel>
+		<RepositoryUrl>https://github.com/TheBlueHeron/BlueHeron.Collections.Trie</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/TheBlueHeron/BlueHeron.Collections.Trie</PackageProjectUrl>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<IsTrimmable>True</IsTrimmable>

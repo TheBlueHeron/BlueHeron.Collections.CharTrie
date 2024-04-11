@@ -5,7 +5,7 @@ VisualStudioVersion = 17.10.34804.81
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueHeron.Collections.Trie", "BlueHeron.Collections.Trie.csproj", "{1EB77473-7BE3-4462-8221-8CADF3E1C126}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueHeron.Collections.Trie.Tests", "..\BlueHeron.Collections.Trie.Tests\BlueHeron.Collections.Trie.Tests.csproj", "{522C5332-0F36-4E42-843F-B9BAF95EB1D8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueHeron.Collections.Trie.Tests", "Tests\BlueHeron.Collections.Trie.Tests.csproj", "{522C5332-0F36-4E42-843F-B9BAF95EB1D8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
