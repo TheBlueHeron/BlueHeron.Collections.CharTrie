@@ -43,11 +43,11 @@ public class TestTrie
     public void Traversal()
     {
         var trie =  Create();
-        var words = trie.GetWords(null);
+        var words = trie.Find((string?)null);
 
         Debug.Assert(words != null && words.ToList().Count == 5);
 
-        words = trie.GetWords("woord");
+        words = trie.Find("woord");
         Debug.Assert(words != null && words.ToList().Count == 2);
     }
 
@@ -57,14 +57,22 @@ public class TestTrie
         var trie = Create();
         IEnumerable<string> words;
         
-        words = trie.Find(['w']);
+        words = trie.Find(['w']); // same as prefix 'w'
         Debug.Assert(words.Count() == 3);
-        words = trie.Find(['w', 'o']);
+        words = trie.Find(['w', 'o']); // same as prefix 'wo'
         Debug.Assert(words.Count() == 2);
-        words = trie.Find([null, 'o']);
+        words = trie.Find([null, 'o']); // where second letter is an 'o'
         Debug.Assert(words.Count() == 3);
-        words = trie.Find([null, 'o', null, 'o']);
+        words = trie.Find([null, 'o', null, 'o']); // where second and fourth letter is an 'o'
         Debug.Assert(words.Count() == 1);
+        words = trie.Find([null, 'o', null, 'o'], true); // where second and fourth letter is an 'o' and word is 4 letters long
+        Debug.Assert(!words.Any());
+        words = trie.Find([null, 'o', null, 'o', null], true); // where second and fourth letter is an 'o' and word is 5 letters long
+        Debug.Assert(words.Count() == 1);
+        words = trie.FindContaining("oo"); // same as string.Contains("oo")
+        Debug.Assert(words.Count() == 2);
+        words = trie.FindContaining("ord"); // first 'o' is a 'false' match ('wOord', 'wOorden'), but should not be a problem
+        Debug.Assert(words.Count() == 2);
     }
 
     /// <summary>
@@ -101,7 +109,7 @@ public class TestTrieMap
     public void Traversal()
     {
         var trie = Create();
-        var values = trie.GetValues(null).ToList();
+        var values = trie.FindValues(null).ToList();
         var blExistsVal = trie.Exists(3); // should exist
 
         Debug.Assert(values.Count == 5 && blExistsVal);
@@ -109,7 +117,7 @@ public class TestTrieMap
         blExistsVal = trie.Exists(123); // should not exist
         Debug.Assert(!blExistsVal);
 
-        var value = trie.GetValue("zijn");
+        var value = trie.FindValue("zijn");
         Debug.Assert(value == 3);
 
         var word = trie.GetWord(3);
@@ -122,14 +130,18 @@ public class TestTrieMap
         var trie = Create();
         IEnumerable<int> values;
 
-        values = trie.FindValue(['w']);
+        values = trie.FindValues(['w']); // same as prefix 'w'
         Debug.Assert(values.Count() == 3);
-        values = trie.FindValue(['w', 'o']);
+        values = trie.FindValues(['w', 'o']); // same as prefix 'wo'
         Debug.Assert(values.Count() == 2);
-        values = trie.FindValue([null, 'o']);
+        values = trie.FindValues([null, 'o']); // where second letter is an 'o'
         Debug.Assert(values.Count() == 3);
-        values = trie.FindValue([null, 'o', null, 'o']);
+        values = trie.FindValues([null, 'o', null, 'o']); // where second and fourth letter is an 'o'
         Debug.Assert(values.Count() == 1);
+        values = trie.FindValuesContaining("oo"); // same as string.Contains("oo")
+        Debug.Assert(values.Count() == 2);
+        values = trie.FindValuesContaining("ord"); // first 'o' is a 'false' match ('wOord', 'wOorden'), but should not be a problem
+        Debug.Assert(values.Count() == 2);
     }
 
     /// <summary>

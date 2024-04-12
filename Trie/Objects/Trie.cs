@@ -75,13 +75,76 @@ public class Trie<TNode> : ITrie<TNode> where TNode : INode<TNode>, new()
     }
 
     /// <summary>
+    /// Gets all words that match the given prefix.
+    /// </summary>
+    /// <param name="prefix">The <see cref="string"/> to match; if <see langword="null"/>: all words are returned</param>
+    /// <returns>An <see cref="IEnumerable{string}"/></returns>
+    public IEnumerable<string> Find(string? prefix)
+    {
+        var startNode = prefix == null ? Root : Root.GetNode(prefix);
+
+        if (startNode == null)
+        {
+            yield break;
+        }
+        else
+        {
+            foreach (var word in Walk(startNode, new StringBuilder(prefix)))
+            {
+                yield return word;
+            }
+        }
+    }
+
+    /// <summary>
     /// Tries to retrieve all words that match the given pattern of characters.
     /// </summary>
     /// <param name="pattern">The pattern of characters to match. A null value matches all characters at that depth</param>
+    /// <param name="matchLength">If <see langword="true"/>, the word length must match the pattern length. Default: <see langword="false"/></param>
     /// <returns>An <see cref="IEnumerable{string}"/> containing all words that match the pattern</returns>
-    public IEnumerable<string> Find(char?[] pattern)
+    public IEnumerable<string> Find(char?[] pattern, bool matchLength = false)
     {
-        foreach (var word in Find(Root, pattern, new StringBuilder()))
+        foreach (var word in Walk(Root, pattern, new StringBuilder(), matchLength, pattern.Length))
+        {
+            yield return word;
+        }
+    }
+
+    ///// <summary>
+    ///// Tries to retrieve all words that contain the given characters.
+    ///// </summary>
+    ///// <param name="chars">The characters to match. The order of appearance is not important</param>
+    ///// <returns>An <see cref="IEnumerable{string}"/> containing all words that contain the given characters</returns>
+    //public IEnumerable<string> FindContaining(char[] chars)
+    //{
+    //    Dictionary<char, int> matchings = [];
+
+    //    foreach (var c in chars)
+    //    {
+    //        if (matchings.TryGetValue(c, out var value))
+    //        {
+    //            matchings[c] = ++value;
+    //        }
+    //        else
+    //        {
+    //            matchings.Add(c, 1);
+    //        }
+    //    }
+
+    //    foreach (var word in FindContaining(Root, matchings, new StringBuilder()))
+    //    {
+    //        yield return word;
+    //    }
+    //}
+
+    /// <summary>
+    /// Retrieves all words that contain the given string.
+    /// </summary>
+    /// <param name="fragment">The string to match</param>
+    /// <returns>An <see cref="IEnumerable{string}"/> containing all words that contain the given string</returns>
+    public IEnumerable<string> FindContaining(string fragment)
+    {
+        foreach (var word in Walk(Root, fragment, new StringBuilder()))
         {
             yield return word;
         }
@@ -96,28 +159,6 @@ public class Trie<TNode> : ITrie<TNode> where TNode : INode<TNode>, new()
     {
         ArgumentNullException.ThrowIfNull(prefix);
         return Root.GetNode(prefix);
-    }
-
-    /// <summary>
-    /// Gets all words that match the given prefix.
-    /// </summary>
-    /// <param name="prefix">The <see cref="string"/> to match; if <see langword="null"/>: all words are returned</param>
-    /// <returns>An <see cref="IEnumerable{string}"/></returns>
-    public IEnumerable<string> GetWords(string? prefix)
-    {
-        var startNode = prefix == null ? Root : Root.GetNode(prefix);
-
-        if (startNode == null)
-        {
-            yield break;
-        }
-        else
-        {
-            foreach (var word in Traverse(startNode, new StringBuilder(prefix)))
-            {
-                yield return word;
-            }
-        }
     }
 
     /// <summary>
@@ -197,39 +238,6 @@ public class Trie<TNode> : ITrie<TNode> where TNode : INode<TNode>, new()
     }
 
     /// <summary>
-    /// Tries to retrieve all words that match the given pattern of characters starting from the given node.
-    /// </summary>
-    /// <param name="node">The <see cref="TNode"/> to start from</param>
-    /// <param name="pattern">The pattern to match</param>
-    /// <param name="buffer">The <see cref="StringBuilder"/> to (re-)use</param>
-    /// <returns>An <see cref="IEnumerable{string}"/></returns>
-    private IEnumerable<string> Find(TNode node, char?[] pattern, StringBuilder buffer)
-    {
-        if (pattern.Length == 0)
-        {
-            foreach (var word in GetWords(buffer.ToString()))
-            {
-                yield return word;
-            }
-        }
-        else
-        {
-            var curChar = pattern[0];
-            var childPattern = pattern.Skip(1).ToArray();
-            var childNodes = curChar == null ? node.Children : node.Children.Where(kv => kv.Key == curChar);
-            foreach (var child in childNodes)
-            {
-                buffer.Append(child.Key);
-                foreach (var word in Find(child.Value, childPattern, buffer))
-                {
-                    yield return word;
-                }
-                buffer.Length--;
-            }
-        }
-    }
-
-    /// <summary>
     /// Removes the given prefix and trims the <see cref="Trie">.
     /// </summary>
     private static void RemovePrefix(Stack<KeyValuePair<char, TNode>> nodes)
@@ -251,26 +259,6 @@ public class Trie<TNode> : ITrie<TNode> where TNode : INode<TNode>, new()
     }
 
     /// <summary>
-    /// Gets all the words recursively starting from the given <see cref="TNode"/>.
-    /// </summary>
-    private static IEnumerable<string> Traverse(TNode node, StringBuilder buffer)
-    {
-        if (node.IsWord)
-        {
-            yield return buffer.ToString();
-        }
-        foreach (var child in node.Children)
-        {
-            buffer.Append(child.Key);
-            foreach (var word in Traverse(child.Value, buffer))
-            {
-                yield return word;
-            }
-            buffer.Length--;
-        }
-    }
-
-    /// <summary>
     /// Removes unneeded <see cref="Node">s going up from a <see cref="TNode"/> to the root node.
     /// </summary>
     private static void Trim(Stack<KeyValuePair<char, TNode>> nodes)
@@ -286,6 +274,156 @@ public class Trie<TNode> : ITrie<TNode> where TNode : INode<TNode>, new()
             parentNode.Children.Remove(node.Key);
         }
     }
+
+    /// <summary>
+    /// Tries to retrieve all words that match the given pattern of characters starting from the given node.
+    /// </summary>
+    /// <param name="node">The <see cref="TNode"/> to start from</param>
+    /// <param name="pattern">The pattern to match</param>
+    /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
+    /// <param name="matchLength">If <see langword="true"/>, the word length must match the pattern length</param>
+    /// <returns>An <see cref="IEnumerable{string}"/></returns>
+    private IEnumerable<string> Walk(TNode node, char?[] pattern, StringBuilder buffer, bool matchLength, int length)
+    {
+        if (pattern.Length == 0)
+        {
+            foreach (var word in Find(buffer.ToString()))
+            {
+                if (!matchLength || word.Length == length)
+                {
+                    yield return word;
+                }
+            }
+        }
+        else
+        {
+            var curChar = pattern[0];
+            var childPattern = pattern.Skip(1).ToArray();
+            var childNodes = curChar == null ? node.Children : node.Children.Where(kv => kv.Key == curChar);
+            foreach (var child in childNodes)
+            {
+                buffer.Append(child.Key);
+                foreach (var word in Walk(child.Value, childPattern, buffer, matchLength, length))
+                {
+                    yield return word;
+                }
+                buffer.Length--;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets all the words recursively, starting from the given <see cref="TNode"/>.
+    /// </summary>
+    /// <param name="node">The <see cref="TNode"/> to start from</param>
+    /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
+    private static IEnumerable<string> Walk(TNode node, StringBuilder buffer)
+    {
+        if (node.IsWord)
+        {
+            yield return buffer.ToString();
+        }
+        foreach (var child in node.Children)
+        {
+            buffer.Append(child.Key);
+            foreach (var word in Walk(child.Value, buffer))
+            {
+                yield return word;
+            }
+            buffer.Length--;
+        }
+    }
+
+    /// <summary>
+    /// Gets all the words that contain the given string recursively, starting from the given <see cref="TNode"/>.
+    /// </summary>
+    /// <param name="node">The node to start from</param>
+    /// <param name="fragment">The string to match</param>
+    /// <param name="matchCount">Signifies how many characters have already been matched (i.e. how to proceed)</param>
+    /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
+    private static IEnumerable<string> Walk(TNode node, string fragment, StringBuilder buffer, int matchCount = 0)
+    {
+        if (fragment.Length == matchCount)
+        {
+            if (node.IsWord) // match
+            {
+                yield return buffer.ToString();
+            }
+            foreach (var child in node.Children)  // all subsequent words are a match
+            {
+                buffer.Append(child.Key);
+                foreach (var word in Walk(child.Value, buffer))
+                {
+                    yield return word;
+                }
+                buffer.Length--;
+            }
+        }
+        else
+        {
+            var charToMatch = fragment[matchCount];
+            foreach (var child in node.Children)
+            {
+                buffer.Append(child.Key);
+                if (child.Key == charToMatch) // char is a match; try to match any remaining string
+                {
+                    foreach (var word in Walk(child.Value, fragment, buffer, matchCount + 1))
+                    {
+                        yield return word;
+                    }
+                }
+                else // if matchCount == 0 look further, else start over from current node
+                {
+                    TNode nextNode;
+                    if (matchCount == 0)
+                    {
+                        nextNode = child.Value;
+                    }
+                    else
+                    {
+                        nextNode = node;
+                        buffer.Length--;
+                    }
+                    foreach (var word in Walk(nextNode, fragment, buffer, 0))
+                    {
+                        yield return word;
+                    }
+                    if (matchCount > 0)
+                    {
+                        break;
+                    }
+                }
+                buffer.Length--;
+            }
+        }
+    }
+
+    ///// <summary>
+    ///// Gets all the words containing the given characters recursively starting from the given <see cref="TNode"/>.
+    ///// </summary>
+    ///// <
+    //private static IEnumerable<string> Walk(TNode node, Dictionary<char, int> matchings, StringBuilder buffer)
+    //{
+    //    var isMatch = false; // flag to indicate that all child nodes are a match as well (no find operation needed)
+
+    //    if (node.IsWord)
+    //    {
+
+    //        if (isMatch)
+    //        {
+    //            yield return buffer.ToString();
+    //        }
+    //    }
+    //    foreach (var child in node.Children)
+    //    {
+    //        buffer.Append(child.Key);
+    //        foreach (var word in isMatch? Walk(child.Value, buffer) : Walk(child.Value, matchings, buffer))
+    //        {
+    //            yield return word;
+    //        }
+    //        buffer.Length--;
+    //    }
+    //}
 
     #endregion
 }
