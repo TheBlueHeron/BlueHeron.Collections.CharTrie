@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace BlueHeron.Collections.Trie.Tests;
 
@@ -75,6 +76,18 @@ public class TestTrie
         Debug.Assert(words.Count() == 2);
     }
 
+    [TestMethod]
+    public void Serialization()
+    {
+        var trie = Create();
+        var json = JsonSerializer.Serialize(trie);
+
+        Debug.Assert(!string.IsNullOrEmpty(json));
+        var reconstituted = JsonSerializer.Deserialize<Trie>(json);
+        Debug.Assert(reconstituted != null && reconstituted.NumWords == trie.NumWords);
+        Debug.Assert(reconstituted.Find("w").ToList().Count == 3);
+    }
+
     /// <summary>
     /// Creates a <see cref="Trie"/> with 5 test values.
     /// </summary>
@@ -118,7 +131,7 @@ public class TestTrieMap
         Debug.Assert(!blExistsVal);
 
         var value = trie.FindValue("zijn");
-        Debug.Assert(value == 3);
+        Debug.Assert(value != null && value.Equals(3));
 
         var word = trie.GetWord(3);
         Debug.Assert(word == "zijn");
@@ -128,7 +141,7 @@ public class TestTrieMap
     public void Find()
     {
         var trie = Create();
-        IEnumerable<int> values;
+        IEnumerable<object?> values;
 
         values = trie.FindValues(['w']); // same as prefix 'w'
         Debug.Assert(values.Count() == 3);
@@ -144,13 +157,25 @@ public class TestTrieMap
         Debug.Assert(values.Count() == 2);
     }
 
+    [TestMethod]
+    public void Serialization()
+    {
+        var trie = Create();
+        var json = JsonSerializer.Serialize(trie);
+
+        Debug.Assert(!string.IsNullOrEmpty(json));
+        var reconstituted = JsonSerializer.Deserialize<Trie>(json);
+        Debug.Assert(reconstituted != null && reconstituted.NumWords == trie.NumWords);
+        Debug.Assert(reconstituted.Find("w").ToList().Count == 3);
+    }
+
     /// <summary>
     /// Creates a <see cref="TrieMap{Int32}"/> with 5 test values.
     /// </summary>
     /// <returns>A <see cref="TrieMap{Int32}"/></returns>
-    private static TrieMap<MapNode<int>, int> Create()
+    private static Trie Create()
     {
-        var tree = new TrieMap<MapNode<int>, int>();
+        var tree = new Trie();
 
         tree.Add("woord", 1);
         tree.Add("woorden", 2);

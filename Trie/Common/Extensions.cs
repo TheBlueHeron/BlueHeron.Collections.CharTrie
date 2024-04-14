@@ -3,7 +3,7 @@
 namespace BlueHeron.Collections;
 
 /// <summary>
-/// Extension functions for use with <see cref="ITrie"/>s.
+/// Extension functions for use with <see cref="Trie.Trie"/>s.
 /// </summary>
 public static class GuidExtensions
 {
@@ -15,7 +15,7 @@ public static class GuidExtensions
     #endregion
 
     /// <summary>
-    /// Converts this <see cref="Guid"/> to a string for use in a <see cref="ITrie"/>.
+    /// Converts this <see cref="Guid"/> to a string for use in a <see cref="Trie.Trie"/>.
     /// </summary>
     /// <param name="id">This <see cref="Guid"/></param>
     /// <returns>A <see cref="string"/> containing the numbers only</returns>
