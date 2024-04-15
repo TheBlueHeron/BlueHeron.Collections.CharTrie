@@ -13,6 +13,7 @@ public class NodeConverter : JsonConverter<Node>
 
     private const string _C = "c"; // Children
     private const string _N = "n"; // NumWords
+    private const string _T = "t"; // TypeIndex
     private const string _V = "v"; // Value
     private const string _W = "w"; // IsWord
 
@@ -21,18 +22,93 @@ public class NodeConverter : JsonConverter<Node>
     #region Public methods and functions
 
     /// <summary>
-    /// Reads the value of the node.
+    /// Reads the value of and sets it on the node.
     /// </summary>
     /// <param name="reader">The <see cref="Utf8JsonReader"/> containing the data</param>
-    /// <param name="propertyName">The name of the current property</param>
-    /// <param name="value">The <see cref="Node"/> to deserialize</param>
-    private static void ReadValue(ref Utf8JsonReader reader, string? propertyName, Node value)
+    /// <param name="node">The <see cref="Node"/>, whose value to deserialize</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
+    private static void ReadValue(ref Utf8JsonReader reader, Node node, JsonSerializerOptions options)
     {
-        switch (reader.TokenType)
+        if (node.TypeIndex >= 0)
         {
-            case JsonTokenType.Number:
-                value.Value = reader.GetInt32();
-                break;
+            var type = Type.GetType(Trie.Types[node.TypeIndex]);
+
+            if (type != null)
+            {
+                switch (reader.TokenType)
+                {
+                    case JsonTokenType.Number:
+                        switch (type)
+                        {
+                            case Type _ when type == typeof(short):
+                                node.Value = reader.GetInt16();
+                                break;
+                            case Type _ when type == typeof(int):
+                                node.Value = reader.GetInt32();
+                                break;
+                            case Type _ when type == typeof(float):
+                                node.Value = reader.GetSingle();
+                                break;
+                            case Type _ when type == typeof(double):
+                                node.Value = reader.GetDouble();
+                                break;
+                            case Type _ when type == typeof(long):
+                                node.Value = reader.GetInt64();
+                                break;
+                            case Type _ when type == typeof(decimal):
+                                node.Value = reader.GetDecimal();
+                                break;
+                        }
+                        break;
+                    case JsonTokenType.String:
+                        switch (type)
+                        {
+                            case Type _ when type == typeof(DateOnly):
+                                if (DateOnly.TryParse(reader.GetString(), out var d))
+                                {
+                                    node.Value = d;
+                                }
+                                break;
+                            case Type _ when type == typeof(DateTime):
+                                if (DateTime.TryParse(reader.GetString(), out var dt))
+                                {
+                                    node.Value = dt;
+                                }
+                                break;
+                            case Type _ when type == typeof(DateTimeOffset):
+                                if (DateTimeOffset.TryParse(reader.GetString(), out var o))
+                                {
+                                    node.Value = o;
+                                }
+                                break;
+                            default:
+                                node.Value = reader.GetString();
+                                break;
+                        }
+                        break;
+                    case JsonTokenType.True:
+                    case JsonTokenType.False:
+                        node.Value = reader.GetBoolean();
+                        break;
+                    case JsonTokenType.StartObject: // try to deserialize object to its registered type
+                        {
+                            try
+                            {
+                                using var doc = JsonDocument.ParseValue(ref reader);
+
+                                node.Value = JsonSerializer.Deserialize(doc.RootElement, type, options);
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidOperationException($"Unable to parse object of type '{Trie.Types[node.TypeIndex]}'.", ex);
+                            }
+                        }
+                        break;
+                    default:
+                        node.Value = null;
+                        break;
+                }
+            }
         }
     }
 
@@ -40,13 +116,15 @@ public class NodeConverter : JsonConverter<Node>
     /// Writes the value of the node.
     /// </summary>
     /// <param name="writer">The <see cref="Utf8JsonWriter"/> to write to</param>
-    /// <param name="value">The <see cref="Node.Value"/> to serialize</param>
+    /// <param name="node">The <see cref="Node"/> whose value to serialize</param>
     /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
-    private static void WriteValue(Utf8JsonWriter writer, object value)
+    private static void WriteValue(Utf8JsonWriter writer, Node node, JsonSerializerOptions options)
     {
-        if (value is int v)
+        if (node.Value != null)
         {
-            writer.WriteNumber(_V, v);
+            writer.WriteNumber(_T, node.TypeIndex);
+            writer.WritePropertyName(_V);
+            writer.WriteRawValue(JsonSerializer.Serialize(node.Value, options));
         }
     }
 
@@ -75,9 +153,13 @@ public class NodeConverter : JsonConverter<Node>
                             reader.Read();
                             node.IsWord = true;  // no need to read value, because the value is always 1, meaning 'true'. When node.IsWord = false, it is not written during serialization.
                             break;
+                        case _T:
+                            reader.Read();
+                            node.TypeIndex = reader.GetInt32();
+                            break;
                         case _V:
                             reader.Read();
-                            ReadValue(ref reader, propertyName, node);
+                            ReadValue(ref reader, node, options);
                             break;
                         case _C: // must come last!
                             reader.Read(); // StartObject of dictionary
@@ -120,10 +202,7 @@ public class NodeConverter : JsonConverter<Node>
             writer.WriteNumber(_W, 1);
         }
         writer.WriteNumber(_N,value.NumWords);
-        if (value.Value != null)
-        {
-            WriteValue(writer, value.Value);
-        }
+        WriteValue(writer, value, options);
         if (value.Children.Count > 0) // must come last!
         {
             writer.WriteStartObject(_C);

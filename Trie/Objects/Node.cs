@@ -47,6 +47,11 @@ public class Node
     }
 
     /// <summary>
+    /// The index of the <see cref="Type"/> of the <see cref="Value"/> in the <see cref="Trie.RegisteredTypes"/> list.
+    /// </summary>
+    public int TypeIndex { get; set; } = -1;
+
+    /// <summary>
     /// The value that is represented by this node.
     /// </summary>
     public object? Value { get; set; }

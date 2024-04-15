@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
-using System.Xml.Linq;
 
 namespace BlueHeron.Collections.Trie;
 
@@ -13,6 +12,8 @@ public class Trie
     #region Objects and variables
 
     private const char _rootChar = ' ';
+
+    private static List<string> mRegisteredTypes = [];
 
     #endregion
 
@@ -30,8 +31,25 @@ public class Trie
     [JsonIgnore()]
     public Node Root => RootNode;
 
+    /// <summary>
+    /// List of registered types that is used in deserialization.
+    /// </summary>
     [JsonInclude(), JsonPropertyName("rt")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needed for serialization combined with static access.")]
+    public List<string> RegisteredTypes
+    {
+        get => mRegisteredTypes;
+        internal set => mRegisteredTypes = value;
+    }
+
+    [JsonInclude(), JsonPropertyName("rn")]
     internal Node RootNode { get; set; } = new Node();
+
+    /// <summary>
+    /// Providse access to the list of registered types for the <see cref="Serialization.NodeConverter"/> that needs it when deserializing nodes.
+    /// </summary>
+    [JsonIgnore()]
+    internal static List<string> Types => mRegisteredTypes;
 
     #endregion
 
@@ -54,8 +72,22 @@ public class Trie
     /// <param name="value">The value represented by the <paramref name="word"/></param>
     public void Add(string word, object value)
     {
+        var typeName = value.GetType().AssemblyQualifiedName;
+
+        if (string.IsNullOrEmpty(typeName))
+        {
+            throw new NotSupportedException(nameof(value));
+        }
         var node = AddWord(word);
+        var typeIndex = RegisteredTypes.IndexOf(typeName);
+
+        if (typeIndex == -1)
+        {
+            RegisteredTypes.Add(typeName);
+            typeIndex = RegisteredTypes.Count - 1;
+        }
         node.IsWord = true;
+        node.TypeIndex = typeIndex;
         node.Value = value;
     }
 

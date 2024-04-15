@@ -177,11 +177,11 @@ public class TestTrieMap
     {
         var tree = new Trie();
 
-        tree.Add("woord", 1);
-        tree.Add("woorden", 2);
-        tree.Add("zijn", 3);
-        tree.Add("wapens", 4);
-        tree.Add("logos", 5);
+        tree.Add("woord", 1); // typeindex -> 0
+        tree.Add("woorden", 2.14); // typeindex -> 1
+        tree.Add("zijn", 3.0f); // typeindex -> 2
+        tree.Add("wapens", DateTime.Now); // typeindex -> 3
+        tree.Add("logos", new Node() { IsWord = true, Value = 3.1415, TypeIndex = 1 }); // node gets typeindex -> 4, set node value type to double(= index 1) to test deserialization
 
         return tree;
     }
