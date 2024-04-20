@@ -20,4 +20,27 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Trie\BlueHeron.Collections.Trie.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Dictionaries\" />
+	</ItemGroup>
+	<ItemGroup>
+	  <None Update="Dictionaries\de.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\en.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\fr.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\la.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\nl.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\sp.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
 </Project>

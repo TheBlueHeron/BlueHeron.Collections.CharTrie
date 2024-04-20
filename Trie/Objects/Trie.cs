@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using System.Text.Json.Serialization;
 
 namespace BlueHeron.Collections.Trie;
@@ -12,6 +14,8 @@ public class Trie
     #region Objects and variables
 
     private const char _rootChar = ' ';
+
+    private static readonly CompositeFormat errImport = CompositeFormat.Parse("Unable to import {0}. See inner exception for details.");
 
     private static List<string> mRegisteredTypes = [];
 
@@ -34,12 +38,11 @@ public class Trie
     /// <summary>
     /// List of registered types that is used in deserialization.
     /// </summary>
-    [JsonInclude(), JsonPropertyName("rt")]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needed for serialization combined with static access.")]
-    public List<string> RegisteredTypes
+    [JsonInclude(), JsonPropertyName("rt"), SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needed for serialization combined with static access.")]
+    public IEnumerable<string> RegisteredTypes
     {
         get => mRegisteredTypes;
-        internal set => mRegisteredTypes = value;
+        internal set => mRegisteredTypes = value.ToList();
     }
 
     [JsonInclude(), JsonPropertyName("rn")]
@@ -61,8 +64,7 @@ public class Trie
     /// <param name="word">The <see cref="string"/> to add</param>
     public void Add(string word)
     {
-        var node = AddWord(word);
-        node.IsWord = true;
+        _ = AddWord(word);
     }
 
     /// <summary>
@@ -79,14 +81,13 @@ public class Trie
             throw new NotSupportedException(nameof(value));
         }
         var node = AddWord(word);
-        var typeIndex = RegisteredTypes.IndexOf(typeName);
+        var typeIndex = mRegisteredTypes.IndexOf(typeName);
 
         if (typeIndex == -1)
         {
-            RegisteredTypes.Add(typeName);
-            typeIndex = RegisteredTypes.Count - 1;
+            mRegisteredTypes.Add(typeName);
+            typeIndex = mRegisteredTypes.Count - 1;
         }
-        node.IsWord = true;
         node.TypeIndex = typeIndex;
         node.Value = value;
     }
@@ -134,7 +135,7 @@ public class Trie
         }
         foreach (var v in Walk(Root))
         {
-            if (v != null && value.Equals(v))
+            if (v != null && value.Equals(v)) // Comparer<object>.Default.Compare(value, v) == 0
             {
                 return true;
             }
@@ -271,8 +272,8 @@ public class Trie
     /// Returns the first word that carries the given value.
     /// </summary>
     /// <param name="value">The value for which to find the word</param>
-    /// <returns>A <see cref="string"/> if the value could be found, else an empty string</returns>
-    public string GetWord(object value)
+    /// <returns>A <see cref="string"/> if the value could be found, else <see langword="null"></returns>
+    public string? GetWord(object value)
     {
         List<char> chars = [];
 
@@ -281,7 +282,47 @@ public class Trie
             chars.Reverse(); // last character was added first
             return new string(chars.ToArray());
         }
-        return string.Empty;
+        return null;
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="Trie"/> and tries to import all words in the given text file. One word per line is expected.
+    /// Whitespace is trimmed. Empty lines are ignored.
+    /// </summary>
+    /// <returns>A <see cref="Task{Trie}"/></returns>
+    /// <exception cref="InvalidOperationException">The file could not be opened and read as a text file.</exception>
+    public static async Task<Trie> ImportAsync(FileInfo fi)
+    {
+        var trie = new Trie();
+
+        if (fi != null && fi.Exists)
+        {
+            try
+            {
+                using var reader = fi.OpenText();
+                var curLine = await reader.ReadLineAsync();
+                var numLinesRead = 0;
+                var numLinesAdded = 0;
+                while (curLine != null)
+                {
+                    numLinesRead++;
+                    if (curLine.Length > 0)
+                    {
+                        trie.Add(curLine.Trim());
+                        numLinesAdded++;
+                    }
+                    curLine = await reader.ReadLineAsync();
+                }
+#if DEBUG
+                Debug.WriteLine("Lines read: {0} | Lines added: {1} | NumWords: {2}.", numLinesRead, numLinesAdded, trie.NumWords);
+#endif
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(string.Format(null, errImport, fi.FullName), ex);
+            }
+        }
+        return trie;
     }
 
     /// <summary>
@@ -318,6 +359,7 @@ public class Trie
 
         foreach (var c in word)
         {
+            node.NumWords = -1; // force recalculation
             if (!node.Children.TryGetValue(c, out var value))
             {
                 value = new Node();
@@ -325,6 +367,7 @@ public class Trie
             }
             node = value;
         }
+        node.IsWord = true;
         return node;
     }
 
@@ -566,7 +609,7 @@ public class Trie
         }
         foreach (var child in node.Children)
         {
-            foreach (var value in Walk(child.Value))
+            foreach (var value in Walk(child.Value, curDepth++, length))
             {
                 yield return value;
             }

@@ -4,7 +4,7 @@ using BlueHeron.Collections.Trie.Serialization;
 namespace BlueHeron.Collections.Trie;
 
 /// <summary>
-/// A basic node, implemented by subclassing <see cref="NodeBase{Node}"/>.
+/// A node in the <see cref="Trie"/>, which represents a character.
 /// </summary>
 [JsonConverter(typeof(NodeConverter))]
 public class Node
@@ -22,16 +22,21 @@ public class Node
     /// <summary>
     /// Gets the collection of <see cref="Node"/>s that immediately follow this <see cref="Node"/>.
     /// </summary>
-    public IDictionary<char, Node> Children => mChildren;
+    public IReadOnlyDictionary<char, Node> Nodes => mChildren;
 
     /// <summary>
-    /// Determines whether this <see cref="Node"/> finishes a word.
+    /// Gets the internally used <see cref="RobinHoodDictionary{char, Node}"/>.
+    /// </summary>
+    internal RobinHoodDictionary<char, Node> Children => mChildren;
+
+    /// <summary>
+    /// Gets a boolean, determining whether this <see cref="Node"/> finishes a word.
     /// </summary>
     /// <remarks>If a node is a word, it may still have children that form other words.</remarks>
-    public bool IsWord { get; set; }
+    public bool IsWord { get; internal set; }
 
     /// <summary>
-    /// Returns the number of words of which this <see cref="Node"/> is a part.
+    /// Gets the number of words of which this <see cref="Node"/> is a part.
     /// </summary>
     public int NumWords
     {
@@ -39,22 +44,22 @@ public class Node
         {
             if (mNumWords < 0)
             {
-                mNumWords = (IsWord ? 1 : 0) + (Children.Count == 0 ? 0 : Children.Sum(c => c.Value.NumWords));
+                mNumWords = (IsWord ? 1 : 0) + (mChildren.Count == 0 ? 0 : mChildren.Sum(c => c.Value.NumWords));
             }
             return mNumWords;
         }
-        set => mNumWords = value;
+        internal set => mNumWords = value;
     }
 
     /// <summary>
-    /// The index of the <see cref="Type"/> of the <see cref="Value"/> in the <see cref="Trie.RegisteredTypes"/> list.
+    /// Gets the index of the <see cref="Type"/> of the <see cref="Value"/> in the <see cref="Trie.RegisteredTypes"/> list.
     /// </summary>
-    public int TypeIndex { get; set; } = -1;
+    public int TypeIndex { get; internal set; } = -1;
 
     /// <summary>
-    /// The value that is represented by this node.
+    /// Gets the value that is represented by this node.
     /// </summary>
-    public object? Value { get; set; }
+    public object? Value { get; internal set; }
 
     #endregion
 
@@ -65,7 +70,8 @@ public class Node
     /// </summary>
     public void Clear()
     {
-        Children.Clear();
+        mChildren.Clear();
+        mNumWords = -1;
     }
 
     /// <summary>
@@ -76,7 +82,7 @@ public class Node
     public Node GetNode(char character)
     {
         Node? node;
-        if (Children.TryGetValue(character, out node))
+        if (mChildren.TryGetValue(character, out node))
         {
             return node;
         }
@@ -108,7 +114,7 @@ public class Node
     /// <returns>An <see cref="IEnumerable{Node}"/></returns>
     public IEnumerable<Node> GetNodes()
     {
-        return Children.Values;
+        return mChildren.Values;
     }
 
     #endregion

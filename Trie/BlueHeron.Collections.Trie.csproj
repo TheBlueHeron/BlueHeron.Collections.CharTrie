@@ -12,13 +12,7 @@
 		<RepositoryUrl>https://github.com/TheBlueHeron/BlueHeron.Collections.Trie</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/TheBlueHeron/BlueHeron.Collections.Trie</PackageProjectUrl>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<IsTrimmable>True</IsTrimmable>
-		<IsAotCompatible>True</IsAotCompatible>
-	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<IsTrimmable>True</IsTrimmable>
-		<IsAotCompatible>True</IsAotCompatible>
 		<Optimize>true</Optimize>
 	</PropertyGroup>
 	<ItemGroup>

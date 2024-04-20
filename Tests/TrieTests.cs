@@ -88,6 +88,14 @@ public class TestTrie
         Debug.Assert(reconstituted.Find("w").ToList().Count == 3);
     }
 
+    [TestMethod]
+    public async Task Import()
+    {
+        var trie = await Trie.ImportAsync(new FileInfo("Dictionaries\\nl.dic"));
+
+        Debug.Assert(trie != null && trie.NumWords == 374622);
+    }
+
     /// <summary>
     /// Creates a <see cref="Trie"/> with 5 test values.
     /// </summary>
@@ -123,7 +131,7 @@ public class TestTrieMap
     {
         var trie = Create();
         var values = trie.FindValues(null).ToList();
-        var blExistsVal = trie.Exists(3); // should exist
+        var blExistsVal = trie.Exists(3.0f); // should exist
 
         Debug.Assert(values.Count == 5 && blExistsVal);
 
@@ -131,10 +139,13 @@ public class TestTrieMap
         Debug.Assert(!blExistsVal);
 
         var value = trie.FindValue("zijn");
-        Debug.Assert(value != null && value.Equals(3));
+        Debug.Assert(value != null && value.Equals(3.0f));
 
-        var word = trie.GetWord(3);
+        var word = trie.GetWord(3.0f);
         Debug.Assert(word == "zijn");
+
+        word = trie.GetWord(3); // Int32: not equal
+        Debug.Assert(word is null);
     }
 
     [TestMethod]
@@ -167,6 +178,9 @@ public class TestTrieMap
         var reconstituted = JsonSerializer.Deserialize<Trie>(json);
         Debug.Assert(reconstituted != null && reconstituted.NumWords == trie.NumWords);
         Debug.Assert(reconstituted.Find("w").ToList().Count == 3);
+        
+        var node = trie.GetNode("logos");
+        Debug.Assert(node != null && node.Value != null && ((dynamic)node.Value).PropertyA == true && ((dynamic)node.Value).PropertyB == 3.1415);
     }
 
     /// <summary>
@@ -181,7 +195,7 @@ public class TestTrieMap
         tree.Add("woorden", 2.14); // typeindex -> 1
         tree.Add("zijn", 3.0f); // typeindex -> 2
         tree.Add("wapens", DateTime.Now); // typeindex -> 3
-        tree.Add("logos", new Node() { IsWord = true, Value = 3.1415, TypeIndex = 1 }); // node gets typeindex -> 4, set node value type to double(= index 1) to test deserialization
+        tree.Add("logos", new {PropertyA = true, PropertyB = 3.1415 }); // typeindex -> 4
 
         return tree;
     }
