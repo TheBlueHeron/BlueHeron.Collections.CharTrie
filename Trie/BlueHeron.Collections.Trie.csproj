@@ -15,7 +15,4 @@
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<Optimize>true</Optimize>
 	</PropertyGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\..\BlueHeron.Collections.RobinHoodMap\BlueHeron.Collections.RobinHoodDictionary.csproj" />
-	</ItemGroup>
 </Project>

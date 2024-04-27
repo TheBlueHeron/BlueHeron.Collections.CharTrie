@@ -11,7 +11,7 @@ public class NodeConverter : JsonConverter<Node>
 {
     #region Fields
 
-    private const string _C = "c"; // Children
+    private const string _C = "c"; // NumChildren
     private const string _N = "n"; // NumWords
     private const string _T = "t"; // TypeIndex
     private const string _V = "v"; // Value
@@ -19,7 +19,7 @@ public class NodeConverter : JsonConverter<Node>
 
     #endregion
 
-    #region Public methods and functions
+    #region Private methods and functions
 
     /// <summary>
     /// Reads the value of and sets it on the node.
@@ -27,7 +27,7 @@ public class NodeConverter : JsonConverter<Node>
     /// <param name="reader">The <see cref="Utf8JsonReader"/> containing the data</param>
     /// <param name="node">The <see cref="Node"/>, whose value to deserialize</param>
     /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
-    private static void ReadValue(ref Utf8JsonReader reader, Node node, JsonSerializerOptions options)
+    protected static void ReadValue(ref Utf8JsonReader reader, Node node, JsonSerializerOptions options)
     {
         if (node.TypeIndex >= 0)
         {
@@ -118,7 +118,7 @@ public class NodeConverter : JsonConverter<Node>
     /// <param name="writer">The <see cref="Utf8JsonWriter"/> to write to</param>
     /// <param name="node">The <see cref="Node"/> whose value to serialize</param>
     /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
-    private static void WriteValue(Utf8JsonWriter writer, Node node, JsonSerializerOptions options)
+    protected static void WriteValue(Utf8JsonWriter writer, Node node, JsonSerializerOptions options)
     {
         if (node.Value != null)
         {
@@ -145,6 +145,10 @@ public class NodeConverter : JsonConverter<Node>
                     var propertyName = reader.GetString();
                     switch (propertyName)
                     {
+                        case _C:
+                            reader.Read();
+                            node.NumChildren = reader.GetInt32();
+                            break;
                         case _N:
                             reader.Read();
                             node.NumWords = reader.GetInt32();
@@ -161,59 +165,27 @@ public class NodeConverter : JsonConverter<Node>
                             reader.Read();
                             ReadValue(ref reader, node, options);
                             break;
-                        case _C: // must come last!
-                            reader.Read(); // StartObject of dictionary
-                            reader.Read(); // PropertyName -> is key of node in dictionary
-                            while (reader.TokenType == JsonTokenType.PropertyName)
-                            {
-                                var p = reader.GetString();
-                                reader.Read(); // StartObject of node
-                                var child = Read(ref reader, typeToConvert, options);
-                                if (!string.IsNullOrEmpty(p))
-                                {
-                                    if (child != null)
-                                    {
-                                        node.Children.Add(p[0], child);
-                                    }
-                                }
-                                reader.Read(); // move to end or next node
-                            }
-                            break;
-                    }
-                    if (reader.TokenType == JsonTokenType.EndObject) // EndObject of dictionary
-                    {
-                        reader.Read(); // move to end or next node
-                        return node;
                     }
                     break;
                 case JsonTokenType.EndObject: // EndObject of node
                     return node;
             }
         }
-        throw new InvalidOperationException(); // this should not happen
+        throw new InvalidCastException(); // this should not happen
     }
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, Node value, JsonSerializerOptions options)
     {
-        writer.WriteStartObject(); // node
+        writer.WriteStartObject();
         if (value.IsWord)
         {
             writer.WriteNumber(_W, 1);
         }
+        writer.WriteNumber(_C, value.NumChildren);
         writer.WriteNumber(_N,value.NumWords);
         WriteValue(writer, value, options);
-        if (value.Children.Count > 0) // must come last!
-        {
-            writer.WriteStartObject(_C);
-            foreach (var kv in value.Children)
-            {
-                writer.WritePropertyName(kv.Key.ToString());
-                Write(writer, kv.Value, options);
-            }
-            writer.WriteEndObject(); // cc
-        }
-        writer.WriteEndObject(); // node
+        writer.WriteEndObject();
     }
 
     #endregion

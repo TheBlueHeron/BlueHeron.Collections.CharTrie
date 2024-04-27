@@ -11,9 +11,32 @@ public class Node
 {
     #region Objects and variables
 
-    private int mNumWords = -1; // -1: unset
+    private int mNumChildren;
+    private int mNumWords;
+    private readonly Dictionary<char, Node> mChildren;
+    //private static readonly EqualityComparer<char> mComparer;
 
-    private readonly RobinHoodDictionary<char, Node> mChildren = [];
+    #endregion
+
+    #region Construction
+
+    ///// <summary>
+    ///// Initializes the static <see cref="EqualityComparer{Char}"/> needed by the <see cref="Nodes"/> dictionary.
+    ///// </summary>
+    //static Node()
+    //{
+    //    mComparer = EqualityComparer<char>.Default;
+    //}
+
+    /// <summary>
+    /// Creates a new <see cref="Node"/> with an empty <see cref="Nodes"/> collection and <see cref="NumWords"/> set to -1 (i.e. unset).
+    /// </summary>
+    public Node()
+    {
+        mChildren = []; //  RobinHoodDictionary<char, Node>(16, 0.8, mComparer)
+        mNumChildren = -1; // -1: unset
+        mNumWords = -1;
+    }
 
     #endregion
 
@@ -27,13 +50,29 @@ public class Node
     /// <summary>
     /// Gets the internally used <see cref="RobinHoodDictionary{char, Node}"/>.
     /// </summary>
-    internal RobinHoodDictionary<char, Node> Children => mChildren;
+    internal Dictionary<char, Node> Children => mChildren;
 
     /// <summary>
     /// Gets a boolean, determining whether this <see cref="Node"/> finishes a word.
     /// </summary>
     /// <remarks>If a node is a word, it may still have children that form other words.</remarks>
     public bool IsWord { get; internal set; }
+
+    /// <summary>
+    /// Gets the number of child nodes of this <see cref="Node"/>.
+    /// </summary>
+    public int NumChildren
+    {
+        get
+        {
+            if (mNumChildren < 0)
+            {
+                mNumChildren = mChildren.Count;
+            }
+            return mNumChildren;
+        }
+        internal set => mNumChildren = value;
+    }
 
     /// <summary>
     /// Gets the number of words of which this <see cref="Node"/> is a part.

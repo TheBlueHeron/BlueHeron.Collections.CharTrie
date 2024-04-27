@@ -1,7 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using BlueHeron.Collections.Trie.Serialization;
 
 namespace BlueHeron.Collections.Trie;
 
@@ -9,15 +11,18 @@ namespace BlueHeron.Collections.Trie;
 /// A search optimized data structure for words.
 /// </summary>
 /// <typeparam name="TNode">The type of the nodes</typeparam>
+[JsonConverter(typeof(TrieConverter))]
 public class Trie
 {
     #region Objects and variables
 
     private const char _rootChar = ' ';
+    private const string _Export = "export";
+    private const string _Import = "import";
 
-    private static readonly CompositeFormat errImport = CompositeFormat.Parse("Unable to import {0}. See inner exception for details.");
-
+    private static readonly CompositeFormat errImpEx = CompositeFormat.Parse("Unable to {0} '{1}'. See inner exception for details.");
     private static List<string> mRegisteredTypes = [];
+    private static readonly JsonSerializerOptions mSerializerOptions = new() { WriteIndented = false };
 
     #endregion
 
@@ -26,32 +31,28 @@ public class Trie
     /// <summary>
     /// Returns the total number of words in this <see cref="Trie{TNode}"/>.
     /// </summary>
-    [JsonIgnore()]
     public int NumWords => RootNode.NumWords;
 
     /// <summary>
     /// The root <see cref="TNode"/>.
     /// </summary>
-    [JsonIgnore()]
     public Node Root => RootNode;
 
     /// <summary>
     /// List of registered types that is used in deserialization.
     /// </summary>
-    [JsonInclude(), JsonPropertyName("rt"), SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needed for serialization combined with static access.")]
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needed for serialization combined with static access.")]
     public IEnumerable<string> RegisteredTypes
     {
         get => mRegisteredTypes;
         internal set => mRegisteredTypes = value.ToList();
     }
 
-    [JsonInclude(), JsonPropertyName("rn")]
     internal Node RootNode { get; set; } = new Node();
 
     /// <summary>
     /// Providse access to the list of registered types for the <see cref="Serialization.NodeConverter"/> that needs it when deserializing nodes.
     /// </summary>
-    [JsonIgnore()]
     internal static List<string> Types => mRegisteredTypes;
 
     #endregion
@@ -286,17 +287,115 @@ public class Trie
     }
 
     /// <summary>
+    /// Exports this <see cref="Trie"/> to the file with the given name.
+    /// </summary>
+    /// <param name="fileName">The full path and file name, including extension</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
+    /// <returns>A <see cref="bool"/>, signifying the result of the operation</returns>
+    /// <exception cref="InvalidOperationException">The file could not be created or written to</exception>
+    public bool Export(string fileName, JsonSerializerOptions? options = null)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                using var writer = File.CreateText(fileName);
+                writer.Write(JsonSerializer.Serialize(this, options?? mSerializerOptions));
+                writer.Flush();
+                writer.Close();
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(string.Format(null, errImpEx, _Export, fileName), ex);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Exports this <see cref="Trie"/> to the file with the given name asynchronously.
+    /// </summary>
+    /// <param name="fileName">The full path and file name, including extension</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
+    /// <returns>A <see cref="Task{Boolean}"/>, signifying the result of the operation</returns>
+    /// <exception cref="InvalidOperationException">The file could not be created or written to</exception>
+    public async Task<bool> ExportAsync(string fileName, JsonSerializerOptions? options = null)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                using var writer = File.CreateText(fileName);
+                await writer.WriteAsync(JsonSerializer.Serialize(this, options?? mSerializerOptions));
+                await writer.FlushAsync();
+                writer.Close();
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(string.Format(null, errImpEx, _Export, fileName), ex);
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Creates a new <see cref="Trie"/> and tries to import all words in the given text file. One word per line is expected.
     /// Whitespace is trimmed. Empty lines are ignored.
     /// </summary>
-    /// <returns>A <see cref="Task{Trie}"/></returns>
+    /// <param name="fi">The <see cref="FileInfo"/></param>
+    /// <returns>A <see cref="Trie?"/></returns>
     /// <exception cref="InvalidOperationException">The file could not be opened and read as a text file.</exception>
-    public static async Task<Trie> ImportAsync(FileInfo fi)
+    public static Trie? Import(FileInfo fi)
     {
-        var trie = new Trie();
+        Trie? trie = null;
 
         if (fi != null && fi.Exists)
         {
+            trie = new Trie();
+            try
+            {
+                using var reader = fi.OpenText();
+                var curLine = reader.ReadLine();
+                var numLinesRead = 0;
+                var numLinesAdded = 0;
+                while (curLine != null)
+                {
+                    numLinesRead++;
+                    if (curLine.Length > 0)
+                    {
+                        trie.Add(curLine.Trim());
+                        numLinesAdded++;
+                    }
+                    curLine = reader.ReadLine();
+                }
+#if DEBUG
+                Debug.WriteLine("Lines read: {0} | Lines added: {1} | NumWords: {2}.", numLinesRead, numLinesAdded, trie.NumWords);
+#endif
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(string.Format(null, errImpEx, _Import, fi.FullName), ex);
+            }
+        }
+        return trie;
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="Trie"/> and tries to import all words in the given text file asynchronously. One word per line is expected.
+    /// Whitespace is trimmed. Empty lines are ignored.
+    /// </summary>
+    /// <param name="fi">The <see cref="FileInfo"/></param>
+    /// <returns>A <see cref="Task{Trie?}"/></returns>
+    /// <exception cref="InvalidOperationException">The file could not be opened and read as a text file.</exception>
+    public static async Task<Trie?> ImportAsync(FileInfo fi)
+    {
+        Trie? trie = null;
+
+        if (fi != null && fi.Exists)
+        {
+            trie = new Trie();
             try
             {
                 using var reader = fi.OpenText();
@@ -319,7 +418,57 @@ public class Trie
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException(string.Format(null, errImport, fi.FullName), ex);
+                throw new InvalidOperationException(string.Format(null, errImpEx,_Import, fi.FullName), ex);
+            }
+        }
+        return trie;
+    }
+
+    /// <summary>
+    /// Creates a <see cref="Trie"/> from the given json file.
+    /// </summary>
+    /// <param name="fi">The <see cref="FileInfo"/></param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
+    /// <returns>A <see cref="Trie?"/></returns>
+    /// <exception cref="InvalidOperationException">The file could not be opened and read as a text file or its contents could not be parsed into a <see cref="Trie"/>.</exception>
+    public static Trie? Load(FileInfo fi, JsonSerializerOptions? options = null)
+    {
+        Trie? trie = null;
+
+        if (fi != null && fi.Exists)
+        {
+            try
+            {
+                trie = JsonSerializer.Deserialize<Trie>(fi.Open(FileMode.Open, FileAccess.Read, FileShare.Read), options?? mSerializerOptions);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(string.Format(null, errImpEx, _Import, fi.FullName), ex);
+            }
+        }
+        return trie;
+    }
+
+    /// <summary>
+    /// Creates a <see cref="Trie"/> from the given json file asynchronously.
+    /// </summary>
+    /// <param name="fi">The <see cref="FileInfo"/></param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
+    /// <returns>A <see cref="Task{Trie}"/></returns>
+    /// <exception cref="InvalidOperationException">The file could not be opened and read as a text file or its contents could not be parsed into a <see cref="Trie"/>.</exception>
+    public static async Task<Trie?> LoadAsync(FileInfo fi, JsonSerializerOptions? options = null)
+    {
+        Trie? trie = null;
+
+        if (fi != null && fi.Exists)
+        {
+            try
+            {
+                trie = await Task.Run(() => JsonSerializer.Deserialize<Trie>(fi.Open(FileMode.Open, FileAccess.Read, FileShare.Read), options?? mSerializerOptions));
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(string.Format(null, errImpEx, _Import, fi.FullName), ex);
             }
         }
         return trie;
@@ -344,6 +493,29 @@ public class Trie
         RemoveWord(AsStack(word));
     }
 
+    /// <summary>
+    /// Walks depth-first through the tree and returns every <see cref="Node"/> that is encountered, accompanied with its key.
+    /// </summary>
+    /// <returns>An <see cref="IEnumerable{KeyValuePair{char, Node}}"/></returns>
+    public IEnumerable<KeyValuePair<char, Node>> Walk()
+    {
+        return Walk(new KeyValuePair<char, Node>(_rootChar, RootNode));
+    }
+
+    /// <summary>
+    /// Walks depth-first through the tree starting at the node represented by the given prefix and returns every <see cref="Node"/> that is encountered, accompanied with its key.
+    /// </summary>
+    /// <returns>An <see cref="IEnumerable{KeyValuePair{char, Node}}"/></returns>
+    public IEnumerable<KeyValuePair<char, Node>>? Walk(string prefix)
+    {
+        var node = GetNode(prefix);
+        if (node != null)
+        {
+            return Walk(new KeyValuePair<char, Node>(prefix.Last(), node));
+        }
+        return default;
+    }
+
     #endregion
 
     #region Private methods and functions
@@ -359,7 +531,8 @@ public class Trie
 
         foreach (var c in word)
         {
-            node.NumWords = -1; // force recalculation
+            node.NumChildren = -1; // force recalculation
+            node.NumWords = -1;
             if (!node.Children.TryGetValue(c, out var value))
             {
                 value = new Node();
@@ -463,14 +636,34 @@ public class Trie
             var node = nodes.Pop();
             var parentNode = nodes.Peek().Value;
 
-            parentNode.NumWords = -1; // -1: unset
+            parentNode.NumChildren = -1; // -1: unset
+            parentNode.NumWords = -1;
             if (node.Value.IsWord || node.Value.Children.Count != 0)
             {
                 break;
             }
             parentNode.Children.Remove(node.Key);
         }
-        nodes.Peek().Value.NumWords = -1; // root node
+        var root = nodes.Peek().Value;
+
+        root.NumChildren = -1; // root node to unset as well
+        root.NumWords = -1;
+    }
+
+    /// <summary>
+    /// Walks depth-first through the tree starting at the given node and returns every <see cref="Node"/> that is encountered, accompanied with its key.
+    /// </summary>
+    /// <returns>An <see cref="IEnumerable{KeyValuePair{char, Node}}"/></returns>
+    internal static IEnumerable<KeyValuePair<char, Node>> Walk(KeyValuePair<char, Node> node)
+    {
+        yield return node;
+        foreach (var child in node.Value.Children)
+        {
+            foreach (var c in Walk(child))
+            {
+                yield return c;
+            }
+        }
     }
 
     /// <summary>
