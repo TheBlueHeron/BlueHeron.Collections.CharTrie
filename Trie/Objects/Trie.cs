@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -439,7 +440,8 @@ public class Trie
         {
             try
             {
-                trie = JsonSerializer.Deserialize<Trie>(fi.Open(FileMode.Open, FileAccess.Read, FileShare.Read), options?? mSerializerOptions);
+                using var stream = fi.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
+                trie = JsonSerializer.Deserialize<Trie>(stream, options?? mSerializerOptions);
             }
             catch (Exception ex)
             {
@@ -464,7 +466,8 @@ public class Trie
         {
             try
             {
-                trie = await Task.Run(() => JsonSerializer.Deserialize<Trie>(fi.Open(FileMode.Open, FileAccess.Read, FileShare.Read), options?? mSerializerOptions));
+                using var stream = fi.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
+                trie = await JsonSerializer.DeserializeAsync<Trie>(stream, options ?? mSerializerOptions);
             }
             catch (Exception ex)
             {
