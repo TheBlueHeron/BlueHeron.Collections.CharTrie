@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using BlueHeron.Collections.Trie.Serialization;
+using Faster.Map.DenseMap;
 
 namespace BlueHeron.Collections.Trie;
 
@@ -13,27 +14,27 @@ public class Node
 
     private int mNumChildren;
     private int mNumWords;
-    private readonly Dictionary<char, Node> mChildren;
-    //private static readonly EqualityComparer<char> mComparer;
+    private readonly DenseMap<char, Node> mChildren;
+    private static readonly EqualityComparer<char> mComparer;
 
     #endregion
 
     #region Construction
 
-    ///// <summary>
-    ///// Initializes the static <see cref="EqualityComparer{Char}"/> needed by the <see cref="Nodes"/> dictionary.
-    ///// </summary>
-    //static Node()
-    //{
-    //    mComparer = EqualityComparer<char>.Default;
-    //}
+    /// <summary>
+    /// Initializes the static <see cref="EqualityComparer{Char}"/> needed by the <see cref="Nodes"/> dictionary.
+    /// </summary>
+    static Node()
+    {
+        mComparer = EqualityComparer<char>.Default;
+    }
 
     /// <summary>
     /// Creates a new <see cref="Node"/> with an empty <see cref="Nodes"/> collection and <see cref="NumWords"/> set to -1 (i.e. unset).
     /// </summary>
     public Node()
     {
-        mChildren = []; //  RobinHoodDictionary<char, Node>(16, 0.8, mComparer)
+        mChildren = new DenseMap<char, Node>(8, 0.5, mComparer);
         mNumChildren = -1; // -1: unset
         mNumWords = -1;
     }
@@ -45,12 +46,12 @@ public class Node
     /// <summary>
     /// Gets the collection of <see cref="Node"/>s that immediately follow this <see cref="Node"/>.
     /// </summary>
-    public IReadOnlyDictionary<char, Node> Nodes => mChildren;
+    public IReadOnlyDictionary<char, Node> Nodes => mChildren.Entries.ToDictionary();
 
     /// <summary>
     /// Gets the internally used <see cref="RobinHoodDictionary{char, Node}"/>.
     /// </summary>
-    internal Dictionary<char, Node> Children => mChildren;
+    internal DenseMap<char, Node> Children => mChildren;
 
     /// <summary>
     /// Gets a boolean, determining whether this <see cref="Node"/> finishes a word.
@@ -83,7 +84,7 @@ public class Node
         {
             if (mNumWords < 0)
             {
-                mNumWords = (IsWord ? 1 : 0) + (mChildren.Count == 0 ? 0 : mChildren.Sum(c => c.Value.NumWords));
+                mNumWords = (IsWord ? 1 : 0) + (mChildren.Count == 0 ? 0 : Nodes.Sum(c => c.Value.NumWords));
             }
             return mNumWords;
         }
@@ -121,7 +122,7 @@ public class Node
     public Node GetNode(char character)
     {
         Node? node;
-        if (mChildren.TryGetValue(character, out node))
+        if (mChildren.Get(character, out node))
         {
             return node;
         }
@@ -151,10 +152,7 @@ public class Node
     /// Returns all child <see cref="Node"/>s as an <see cref="IEnumerable{Node}"/>.
     /// </summary>
     /// <returns>An <see cref="IEnumerable{Node}"/></returns>
-    public IEnumerable<Node> GetNodes()
-    {
-        return mChildren.Values;
-    }
+    public IEnumerable<Node> GetNodes() => mChildren.Values;
 
     #endregion
 }

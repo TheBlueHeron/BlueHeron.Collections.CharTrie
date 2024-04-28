@@ -52,7 +52,7 @@ public sealed class TrieConverter : JsonConverter<Trie>
                             }
                             else // current node is child of parent node
                             {
-                                parentNode.Children.Add(c, node); 
+                                parentNode.Children.Emplace(c, node);
                                 while (node.NumChildren > node.Children.Count) // next node is child of current node
                                 {
                                     ParseNode(ref reader, node, options);

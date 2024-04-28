@@ -15,4 +15,7 @@
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<Optimize>true</Optimize>
 	</PropertyGroup>
+	<ItemGroup>
+	  <PackageReference Include="Faster.Map" Version="5.0.4" />
+	</ItemGroup>
 </Project>

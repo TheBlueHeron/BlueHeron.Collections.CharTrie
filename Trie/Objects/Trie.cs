@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -49,6 +48,9 @@ public class Trie
         internal set => mRegisteredTypes = value.ToList();
     }
 
+    /// <summary>
+    /// Internally used, mutable root node.
+    /// </summary>
     internal Node RootNode { get; set; } = new Node();
 
     /// <summary>
@@ -114,7 +116,7 @@ public class Trie
 
         foreach (var c in word)
         {
-            if (!node.Children.TryGetValue(c, out var value))
+            if (!node.Children.Get(c, out var value))
             {
                 return false;
             }
@@ -536,10 +538,10 @@ public class Trie
         {
             node.NumChildren = -1; // force recalculation
             node.NumWords = -1;
-            if (!node.Children.TryGetValue(c, out var value))
+            if (!node.Children.Get(c, out var value))
             {
                 value = new Node();
-                node.Children.Add(c, value);
+                node.Children.Emplace(c, value);
             }
             node = value;
         }
@@ -587,7 +589,7 @@ public class Trie
     /// <param name="value">The value> of which to find the word</param>
     private static bool GetWord(List<char> chars, Node node, object value)
     {
-        foreach (var item in node.Children)
+        foreach (var item in node.Children.Entries)
         {
             var childNode = item.Value;
 
@@ -660,7 +662,7 @@ public class Trie
     internal static IEnumerable<KeyValuePair<char, Node>> Walk(KeyValuePair<char, Node> node)
     {
         yield return node;
-        foreach (var child in node.Value.Children)
+        foreach (var child in node.Value.Children.Entries)
         {
             foreach (var c in Walk(child))
             {
@@ -693,7 +695,7 @@ public class Trie
         {
             var curChar = pattern[0];
             var childPattern = pattern.Skip(1).ToArray();
-            var childNodes = curChar == null ? node.Children : node.Children.Where(kv => kv.Key == curChar);
+            var childNodes = curChar == null ? node.Children.Entries : node.Children.Entries.Where(kv => kv.Key == curChar);
             foreach (var child in childNodes)
             {
                 buffer.Append(child.Key);
@@ -717,7 +719,7 @@ public class Trie
         {
             yield return buffer.ToString();
         }
-        foreach (var child in node.Children)
+        foreach (var child in node.Children.Entries)
         {
             buffer.Append(child.Key);
             foreach (var word in Walk(child.Value, buffer))
@@ -743,7 +745,7 @@ public class Trie
             {
                 yield return buffer.ToString();
             }
-            foreach (var child in node.Children)  // all subsequent words are a match
+            foreach (var child in node.Children.Entries)  // all subsequent words are a match
             {
                 buffer.Append(child.Key);
                 foreach (var word in Walk(child.Value, buffer))
@@ -756,7 +758,7 @@ public class Trie
         else
         {
             var charToMatch = fragment[matchCount];
-            foreach (var child in node.Children)
+            foreach (var child in node.Children.Entries)
             {
                 buffer.Append(child.Key);
                 if (child.Key == charToMatch) // char is a match; try to match any remaining string
@@ -803,7 +805,7 @@ public class Trie
         {
             yield return node.Value;
         }
-        foreach (var child in node.Children)
+        foreach (var child in node.Children.Entries)
         {
             foreach (var value in Walk(child.Value, curDepth++, length))
             {
@@ -837,7 +839,7 @@ public class Trie
         {
             var curChar = pattern[0];
             var childPattern = pattern.Skip(1).ToArray();
-            var childNodes = curChar == null ? node.Children : node.Children.Where(kv => kv.Key == curChar);
+            var childNodes = curChar == null ? node.Children.Entries : node.Children.Entries.Where(kv => kv.Key == curChar);
             foreach (var child in childNodes)
             {
                 buffer.Append(child.Key);
@@ -865,7 +867,7 @@ public class Trie
             {
                 yield return node.Value;
             }
-            foreach (var child in node.Children)  // all subsequent words are a match
+            foreach (var child in node.Children.Entries)  // all subsequent words are a match
             {
                 foreach (var value in Walk(child.Value))
                 {
@@ -876,7 +878,7 @@ public class Trie
         else
         {
             var charToMatch = fragment[matchCount];
-            foreach (var child in node.Children)
+            foreach (var child in node.Children.Entries)
             {
                 if (child.Key == charToMatch) // char is a match; try to match any remaining string
                 {
