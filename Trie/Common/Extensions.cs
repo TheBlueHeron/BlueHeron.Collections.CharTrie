@@ -28,19 +28,18 @@ public static class GuidExtensions
     /// <returns>A <see cref="Guid"/></returns>
     public static Guid ToGuid(this string id)
     {
-        if (string.IsNullOrEmpty(id))
+        if (!string.IsNullOrEmpty(id) && id.Length == 32)
         {
-            throw new ArgumentNullException(nameof(id));
+            Guid guid;
+            if (Guid.TryParse(string.Format(null, fmtGuid,
+                id[..8],
+                id.Substring(8, 4),
+                id.Substring(12, 4),
+                id.Substring(16, 4),
+                id.Substring(20, 12)), out guid)){
+                return guid;
+            }
         }
-        if (id.Length != 32)
-        {
-            throw new ArgumentOutOfRangeException(nameof(id));
-        }
-        return Guid.Parse(string.Format(null, fmtGuid,
-            id[..8],
-            id.Substring(8, 4),
-            id.Substring(12, 4),
-            id.Substring(16, 4),
-            id.Substring(20, 12)));
+        throw new ArgumentOutOfRangeException(nameof(id));
     }
 }

@@ -1,9 +1,10 @@
 using System.Text.Json;
+using BlueHeron.Collections.Trie.Search;
 
 namespace BlueHeron.Collections.Trie.Tests;
 
 [TestClass]
-public class TestTrie
+public class A_TrieTests
 {
     [TestMethod]
     public void CreateAndValidate()
@@ -25,7 +26,7 @@ public class TestTrie
             woordeIsWord = node.IsWord;
         }
 
-        Assert.IsTrue(totalWords == 5 && blExistsWoo && numWords == 2 && !woordeIsWord);
+        Assert.IsTrue(totalWords == 6 && blExistsWoo && numWords == 2 && !woordeIsWord);
     }
 
     [TestMethod]
@@ -34,18 +35,18 @@ public class TestTrie
         var trie = Create();
 
         trie.RemovePrefix("woo");
-        Assert.IsTrue(trie.NumWords == 3);
+        Assert.IsTrue(trie.NumWords == 4);
         trie.RemoveWord("wapens");
-        Assert.IsTrue(trie.NumWords == 2);
+        Assert.IsTrue(trie.NumWords == 3);
     }
 
     [TestMethod]
     public void Traversal()
     {
         var trie =  Create();
-        var words = trie.Find((string?)null);
+        var words = trie.Find(string.Empty); // find all
 
-        Assert.IsTrue(words != null && words.ToList().Count == 5);
+        Assert.IsTrue(words != null && words.ToList().Count == 6);
 
         words = trie.Find("woord");
         Assert.IsTrue(words != null && words.ToList().Count == 2);
@@ -57,22 +58,10 @@ public class TestTrie
         var trie = Create();
         IEnumerable<string> words;
         
-        words = trie.Find(['w']); // same as prefix 'w'
-        Assert.IsTrue(words.Count() == 3);
-        words = trie.Find(['w', 'o']); // same as prefix 'wo'
-        Assert.IsTrue(words.Count() == 2);
-        words = trie.Find([null, 'o']); // where second letter is an 'o'
-        Assert.IsTrue(words.Count() == 3);
-        words = trie.Find([null, 'o', null, 'o']); // where second and fourth letter is an 'o'
-        Assert.IsTrue(words.Count() == 1);
-        words = trie.Find([null, 'o', null, 'o'], true); // where second and fourth letter is an 'o' and word is 4 letters long
-        Assert.IsFalse(words.Any());
-        words = trie.Find([null, 'o', null, 'o', null], true); // where second and fourth letter is an 'o' and word is 5 letters long
-        Assert.IsTrue(words.Count() == 1);
         words = trie.FindContaining("oo"); // same as string.Contains("oo")
-        Assert.IsTrue(words.Count() == 2);
-        words = trie.FindContaining("ord"); // first 'o' is a 'false' match ('wOord', 'wOorden'), but should not be a problem
-        Assert.IsTrue(words.Count() == 2);
+        Assert.IsTrue(words.Count() == 3);
+        words = trie.FindContaining("ord");
+        Assert.IsTrue(words.Count() == 3);
     }
 
     [TestMethod]
@@ -109,7 +98,7 @@ public class TestTrie
     /// Creates a <see cref="Trie"/> with 5 test values.
     /// </summary>
     /// <returns>A <see cref="Trie"/></returns>
-    private static Trie Create()
+    public static Trie Create()
     {
         var tree = new Trie();
 
@@ -118,13 +107,14 @@ public class TestTrie
         tree.Add("zijn");
         tree.Add("wapens");
         tree.Add("logos");
+        tree.Add("lustoord");
 
         return tree;
     }
 }
 
 [TestClass]
-public class TestTrieMap
+public class B_TrieMapTests
 {
     [TestMethod]
     public void CreateAndValidate()
@@ -132,17 +122,17 @@ public class TestTrieMap
         var trie = Create();
         var totalWords = trie.NumWords;        
 
-        Assert.IsTrue(totalWords == 5);
+        Assert.IsTrue(totalWords == 6);
     }
 
     [TestMethod]
     public void Traversal()
     {
         var trie = Create();
-        var values = trie.FindValues(null).ToList();
+        var values = trie.FindValues((string?)null).ToList();
         var blExistsVal = trie.Exists(3.0f); // should exist
 
-        Assert.IsTrue(values.Count == 5 && blExistsVal);
+        Assert.IsTrue(values.Count == 6 && blExistsVal);
 
         blExistsVal = trie.Exists(123); // should not exist
         Assert.IsFalse(blExistsVal);
@@ -163,18 +153,10 @@ public class TestTrieMap
         var trie = Create();
         IEnumerable<object?> values;
 
-        values = trie.FindValues(['w']); // same as prefix 'w'
+        values = trie.FindValuesContaining("oo");
         Assert.IsTrue(values.Count() == 3);
-        values = trie.FindValues(['w', 'o']); // same as prefix 'wo'
-        Assert.IsTrue(values.Count() == 2);
-        values = trie.FindValues([null, 'o']); // where second letter is an 'o'
+        values = trie.FindValuesContaining("ord");
         Assert.IsTrue(values.Count() == 3);
-        values = trie.FindValues([null, 'o', null, 'o']); // where second and fourth letter is an 'o'
-        Assert.IsTrue(values.Count() == 1);
-        values = trie.FindValuesContaining("oo"); // same as string.Contains("oo")
-        Assert.IsTrue(values.Count() == 2);
-        values = trie.FindValuesContaining("ord"); // first 'o' is a 'false' match ('wOord', 'wOorden'), but should not be a problem
-        Assert.IsTrue(values.Count() == 2);
     }
 
     [TestMethod]
@@ -200,7 +182,7 @@ public class TestTrieMap
     /// Creates a <see cref="TrieMap{Int32}"/> with 5 test values.
     /// </summary>
     /// <returns>A <see cref="TrieMap{Int32}"/></returns>
-    private static Trie Create()
+    public static Trie Create()
     {
         var tree = new Trie();
 
@@ -209,13 +191,172 @@ public class TestTrieMap
         tree.Add("zijn", 3.0f); // typeindex -> 2
         tree.Add("wapens", DateTime.Now); // typeindex -> 3
         tree.Add("logos", new {PropertyA = true, PropertyB = 3.1415 }); // typeindex -> 4
+        tree.Add("lustoord", 7); // typeindex -> 0
 
         return tree;
     }
 }
 
 [TestClass]
-public class ExtensionsTests
+public class C_PatternMatchTests
+{
+    [TestMethod]
+    public void PrefixMatching()
+    {
+        var trie = A_TrieTests.Create();
+
+        if (trie != null)
+        {
+            IEnumerable<string> words;
+            var prefixPattern = new PatternMatch
+            {
+                new CharMatch('w') // Default: { Type = CharMatchType.First } -> same as prefix 'w'
+            }; // Default: { Type = PatternMatchType.IsPrefix };
+            words = trie.Find(prefixPattern);
+            Assert.IsTrue(words.Count() == 3);
+            prefixPattern.Add('o'); // same as prefix 'wo'; using PatternMatch.Add(...) convenience method
+            words = trie.Find(prefixPattern);
+            Assert.IsTrue(words.Count() == 2);
+            prefixPattern.Clear();
+            prefixPattern.AddRange([CharMatch.Wildcard, new CharMatch('o')]); // where second letter is an 'o'
+            words = trie.Find(prefixPattern);
+            Assert.IsTrue(words.Count() == 3);
+            prefixPattern.AddRange([CharMatch.Wildcard, new CharMatch('o')]); // where second and fourth letter is an 'o'
+            words = trie.Find(prefixPattern);
+            Assert.IsTrue(words.Count() == 1);
+            prefixPattern.Type = PatternMatchType.IsWord;
+            words = trie.Find(prefixPattern); // where second and fourth letter is an 'o' and word is 4 letters long
+            Assert.IsFalse(words.Any());
+            prefixPattern.Add(CharMatch.Wildcard);
+            words = trie.Find(prefixPattern); // where second and fourth letter is an 'o' and word is 5 letters long
+            Assert.IsTrue(words.Count() == 1); // logos :)
+        }
+    }
+
+    [TestMethod]
+    public void PrefixMatchingWithValues()
+    {
+        var trie = B_TrieMapTests.Create();
+
+        if (trie != null)
+        {
+            IEnumerable<object?> values;
+            var prefixPattern = new PatternMatch
+            {
+                new CharMatch('w') // Default: { Type = CharMatchType.First } -> same as prefix 'w'
+            }; // Default: { Type = PatternMatchType.IsPrefix };
+            values = trie.FindValues(prefixPattern);
+            Assert.IsTrue(values.Count() == 3);
+            prefixPattern.Add('o'); // same as prefix 'wo'; using PatternMatch.Add(...) convenience method
+            values = trie.FindValues(prefixPattern);
+            Assert.IsTrue(values.Count() == 2);
+            prefixPattern.Clear();
+            prefixPattern.AddRange([CharMatch.Wildcard, new CharMatch('o')]); // where second letter is an 'o'
+            values = trie.FindValues(prefixPattern);
+            Assert.IsTrue(values.Count() == 3);
+            prefixPattern.AddRange([CharMatch.Wildcard, new CharMatch('o')]); // where second and fourth letter is an 'o'
+            values = trie.FindValues(prefixPattern);
+            Assert.IsTrue(values.Count() == 1);
+            prefixPattern.Type = PatternMatchType.IsWord;
+            values = trie.FindValues(prefixPattern); // where second and fourth letter is an 'o' and word is 4 letters long
+            Assert.IsFalse(values.Any());
+            prefixPattern.Add(CharMatch.Wildcard);
+            values = trie.Find(prefixPattern); // where second and fourth letter is an 'o' and word is 5 letters long
+            Assert.IsTrue(values.Count() == 1); // logos :)
+        }
+    }
+
+    [TestMethod]
+    public void WordMatching()
+    {
+        IEnumerable<string> words;
+        var trie = A_TrieTests.Create();
+
+        if (trie != null)
+        {
+            var woordPattern = new PatternMatch([
+                new CharMatch('w'),
+                CharMatch.Wildcard,
+                CharMatch.Wildcard,
+                CharMatch.Wildcard,
+                new CharMatch('d')
+                ], PatternMatchType.IsWord); // all words that start with 'w', end with 'd' and are 5 letters long
+
+            words = trie.Find(woordPattern);
+            Assert.IsTrue(words.Count() == 1); // 'woord' and not 'woordEN' or 'wAPENS'
+
+            var zijnPattern = new PatternMatch([
+                CharMatch.Wildcard,
+                CharMatch.Wildcard,
+                CharMatch.Wildcard,
+                new CharMatch('n')
+                ], PatternMatchType.IsWord); // all 4 letter words that end with 'n'
+
+            words = trie.Find(zijnPattern);
+            Assert.IsTrue(words.Count() == 1); // 'zijN' and not 'woordeN'
+        }
+    }
+
+    [TestMethod]
+    public void FragmentMatching()
+    {
+        IEnumerable<string> words;
+        var trie = A_TrieTests.Create();
+
+        if (trie != null)
+        {
+            var oordPattern = new PatternMatch([
+                new CharMatch('o'),
+                new CharMatch('o'),
+                new CharMatch('r'),
+                new CharMatch('d')
+                ], PatternMatchType.IsFragment); // all words that contain 'oord'
+
+            words = trie.Find(oordPattern);
+            Assert.IsTrue(words.Count() == 3);
+
+            var nPattern = new PatternMatch([
+                new CharMatch('n')
+                ], PatternMatchType.IsFragment); // all words that contain an 'n'
+
+            words = trie.Find(nPattern);
+            Assert.IsTrue(words.Count() == 3); // 'woordeN', 'zijN', 'wapeNs'
+
+            var us_oPattern = new PatternMatch([
+                new CharMatch('u'),
+                new CharMatch('s'),
+                CharMatch.Wildcard,
+                new CharMatch('o')
+                ], PatternMatchType.IsFragment); // all words that contain 'us*o'
+
+            words = trie.Find(us_oPattern);
+            Assert.IsTrue(words.Count() == 1); // 'lUStOord'
+        }
+    }
+
+    [TestMethod]
+    public void Serialization()
+    {
+        var pattern = new PatternMatch { Type = PatternMatchType.IsWord };
+
+        pattern.Add(CharMatch.Wildcard);
+        pattern.Add('q', CharMatchType.Any);
+        pattern.Add('a', ['á', 'à', 'ä'], CharMatchType.All);
+        
+        var json = JsonSerializer.Serialize(pattern);
+        var reconstituded = JsonSerializer.Deserialize<PatternMatch>(json);
+
+        Assert.IsNotNull(reconstituded);
+        Assert.IsTrue(pattern.Count == reconstituded.Count);
+        Assert.IsTrue(reconstituded[0].Type == pattern[0].Type);
+        Assert.IsTrue(reconstituded[1].Primary == pattern[1].Primary);
+        Assert.IsTrue(reconstituded[2].Alternatives?.Length == pattern[2].Alternatives?.Length && reconstituded[2].Alternatives?[0] == pattern[2].Alternatives?[0] && reconstituded[2].Alternatives?[1] == pattern[2].Alternatives?[1] && reconstituded[2].Alternatives?[2] == pattern[2].Alternatives?[2]);
+    }
+
+}
+
+[TestClass]
+public class D_ExtensionsTests
 {
     [TestMethod]
     public void GuidConversion()
@@ -226,4 +367,9 @@ public class ExtensionsTests
 
         Assert.IsTrue(guid == reconstituded);
     }
+}
+
+[TestClass]
+public class E_BenchMarking
+{
 }

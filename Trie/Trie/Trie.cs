@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BlueHeron.Collections.Trie.Search;
 using BlueHeron.Collections.Trie.Serialization;
 
 namespace BlueHeron.Collections.Trie;
@@ -170,14 +171,15 @@ public class Trie
     }
 
     /// <summary>
-    /// Tries to retrieve all words that match the given pattern of characters.
+    /// Tries to retrieve all words that match the given <see cref="PatternMatch">.
     /// </summary>
-    /// <param name="pattern">The pattern of characters to match. A null value matches all characters at that depth</param>
-    /// <param name="matchLength">If <see langword="true"/>, the word length must match the pattern length. Default: <see langword="false"/></param>
+    /// <param name="pattern">The <see cref="PatternMatch"> to match/param>
     /// <returns>An <see cref="IEnumerable{string}"/> containing all words that match the pattern</returns>
-    public IEnumerable<string> Find(char?[] pattern, bool matchLength = false)
+    public IEnumerable<string> Find([DisallowNull] PatternMatch pattern)
     {
-        foreach (var word in Walk(Root, pattern, new StringBuilder(), matchLength, pattern.Length))
+        foreach (var word in pattern.Type == PatternMatchType.IsFragment?
+            WalkContaining(Root, pattern, new StringBuilder()):
+            Walk(Root, pattern, new StringBuilder(), pattern.Count))
         {
             yield return word;
         }
@@ -190,7 +192,7 @@ public class Trie
     /// <returns>An <see cref="IEnumerable{string}"/> containing all words that contain the given string</returns>
     public IEnumerable<string> FindContaining(string fragment)
     {
-        foreach (var word in Walk(Root, fragment, new StringBuilder()))
+        foreach (var word in WalkContaining(Root, fragment, new StringBuilder()))
         {
             yield return word;
         }
@@ -237,14 +239,15 @@ public class Trie
     /// <summary>
     /// Tries to retrieve all values that match the given pattern of characters.
     /// </summary>
-    /// <param name="pattern">The pattern of characters to match. A null value matches all characters at that depth</param>
-    /// <param name="matchLength">If <see langword="true"/>, the word length must match the pattern length. Default: <see langword="false"/></param>
+    /// <param name="pattern">The <see cref="PatternMatch"/> to match</param>
     /// <returns>An <see cref="IEnumerable{Object?}"/> containing the value of all nodes that match the pattern</returns>
-    public IEnumerable<object?> FindValues(char?[] pattern, bool matchLength = false)
+    public IEnumerable<object?> FindValues(PatternMatch pattern)
     {
-        foreach (var value in Walk(Root, pattern, new StringBuilder(), 0, matchLength))
+        foreach (var word in pattern.Type == PatternMatchType.IsFragment ?
+            WalkValuesContaining(Root, pattern) :
+            WalkValues(Root, pattern, new StringBuilder(), 0))            
         {
-            yield return value;
+            yield return word;
         }
     }
 
@@ -255,7 +258,7 @@ public class Trie
     /// <returns>An <see cref="IEnumerable{Object?}"/></returns>
     public IEnumerable<object?> FindValuesContaining(string fragment)
     {
-        foreach (var value in Walk(Root, fragment))
+        foreach (var value in WalkValuesContaining(Root, fragment))
         {
             yield return value;
         }
@@ -303,7 +306,7 @@ public class Trie
             if (!string.IsNullOrEmpty(fileName))
             {
                 using var writer = File.CreateText(fileName);
-                writer.Write(JsonSerializer.Serialize(this, options?? mSerializerOptions));
+                writer.Write(JsonSerializer.Serialize(this, options ?? mSerializerOptions));
                 writer.Flush();
                 writer.Close();
                 return true;
@@ -330,7 +333,7 @@ public class Trie
             if (!string.IsNullOrEmpty(fileName))
             {
                 using var writer = File.CreateText(fileName);
-                await writer.WriteAsync(JsonSerializer.Serialize(this, options?? mSerializerOptions));
+                await writer.WriteAsync(JsonSerializer.Serialize(this, options ?? mSerializerOptions));
                 await writer.FlushAsync();
                 writer.Close();
                 return true;
@@ -443,7 +446,7 @@ public class Trie
             try
             {
                 using var stream = fi.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
-                trie = JsonSerializer.Deserialize<Trie>(stream, options?? mSerializerOptions);
+                trie = JsonSerializer.Deserialize<Trie>(stream, options ?? mSerializerOptions);
             }
             catch (Exception ex)
             {
@@ -632,7 +635,7 @@ public class Trie
     }
 
     /// <summary>
-    /// Removes unneeded <see cref="Node">s going up from a <see cref="Node"/> to the root node.
+    /// Removes unneeded <see cref="Node"/>s going up from a <see cref="Node"/> to the root node.
     /// </summary>
     private static void Trim(Stack<KeyValuePair<char, Node>> nodes)
     {
@@ -672,20 +675,19 @@ public class Trie
     }
 
     /// <summary>
-    /// Tries to retrieve all words that match the given pattern of characters starting from the given node.
+    /// Tries to retrieve all words that match the given <see cref="PatternMatch"/> starting from the given node.
     /// </summary>
     /// <param name="node">The <see cref="Node"/> to start from</param>
-    /// <param name="pattern">The pattern to match</param>
+    /// <param name="pattern">The <see cref="PatternMatch"> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
-    /// <param name="matchLength">If <see langword="true"/>, the word length must match the pattern length</param>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
-    private IEnumerable<string> Walk(Node node, char?[] pattern, StringBuilder buffer, bool matchLength, int length)
+    private IEnumerable<string> Walk(Node node, PatternMatch pattern, StringBuilder buffer, int length)
     {
-        if (pattern.Length == 0)
+        if (pattern.Count == 0)
         {
             foreach (var word in Find(buffer.ToString()))
             {
-                if (!matchLength || word.Length == length)
+                if (pattern.Type != PatternMatchType.IsWord || word.Length == length)
                 {
                     yield return word;
                 }
@@ -693,13 +695,13 @@ public class Trie
         }
         else
         {
-            var curChar = pattern[0];
-            var childPattern = pattern.Skip(1).ToArray();
-            var childNodes = curChar == null ? node.Children.Entries : node.Children.Entries.Where(kv => kv.Key == curChar);
+            var curMatch = pattern[0];
+            var childPattern = new PatternMatch(pattern.Skip(1), pattern.Type);
+            var childNodes = curMatch == null || curMatch.Type == CharMatchType.All ? node.Children.Entries : node.Children.Entries.Where(kv => curMatch.IsMatch(kv.Key));
             foreach (var child in childNodes)
             {
                 buffer.Append(child.Key);
-                foreach (var word in Walk(child.Value, childPattern, buffer, matchLength, length))
+                foreach (var word in Walk(child.Value, childPattern, buffer, length))
                 {
                     yield return word;
                 }
@@ -731,13 +733,33 @@ public class Trie
     }
 
     /// <summary>
+    /// Gets all the values recursively starting from the given <see cref="Node"/>.
+    /// </summary>
+    /// <param name="curDepth">The depth of the current node</param>
+    /// <param name="length">The length of the word</param>
+    private static IEnumerable<object?> Walk(Node node, int curDepth = 0, int length = 0)
+    {
+        if (node.IsWord && (length == 0 || length == curDepth))
+        {
+            yield return node.Value;
+        }
+        foreach (var child in node.Children.Entries)
+        {
+            foreach (var value in Walk(child.Value, curDepth++, length))
+            {
+                yield return value;
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets all the words that contain the given string recursively, starting from the given <see cref="Node"/>.
     /// </summary>
     /// <param name="node">The node to start from</param>
     /// <param name="fragment">The string to match</param>
     /// <param name="matchCount">Signifies how many characters have already been matched (i.e. how to proceed)</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
-    private static IEnumerable<string> Walk(Node node, string fragment, StringBuilder buffer, int matchCount = 0)
+    private static IEnumerable<string> WalkContaining(Node node, string fragment, StringBuilder buffer, int matchCount = 0)
     {
         if (fragment.Length == matchCount)
         {
@@ -763,7 +785,7 @@ public class Trie
                 buffer.Append(child.Key);
                 if (child.Key == charToMatch) // char is a match; try to match any remaining string
                 {
-                    foreach (var word in Walk(child.Value, fragment, buffer, matchCount + 1))
+                    foreach (var word in WalkContaining(child.Value, fragment, buffer, matchCount + 1))
                     {
                         yield return word;
                     }
@@ -780,7 +802,7 @@ public class Trie
                         nextNode = node;
                         buffer.Length--;
                     }
-                    foreach (var word in Walk(nextNode, fragment, buffer, 0))
+                    foreach (var word in WalkContaining(nextNode, fragment, buffer, 0))
                     {
                         yield return word;
                     }
@@ -795,21 +817,65 @@ public class Trie
     }
 
     /// <summary>
-    /// Gets all the values recursively starting from the given <see cref="Node"/>.
+    /// Gets all the words that contain the given string recursively, starting from the given <see cref="Node"/>.
     /// </summary>
-    /// <param name="curDepth">The depth of the current node</param>
-    /// <param name="length">The length of the word</param>
-    private static IEnumerable<object?> Walk(Node node, int curDepth = 0, int length = 0)
+    /// <param name="node">The node to start from</param>
+    /// <param name="fragment">The <see cref="PatternMatch"> to match</param>
+    /// <param name="matchCount">Signifies how many characters have already been matched (i.e. how to proceed)</param>
+    /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
+    private static IEnumerable<string> WalkContaining(Node node, PatternMatch fragment, StringBuilder buffer, int matchCount = 0)
     {
-        if (node.IsWord && (length == 0 || length == curDepth))
+        if (fragment.Count == matchCount)
         {
-            yield return node.Value;
-        }
-        foreach (var child in node.Children.Entries)
-        {
-            foreach (var value in Walk(child.Value, curDepth++, length))
+            if (node.IsWord) // match
             {
-                yield return value;
+                yield return buffer.ToString();
+            }
+            foreach (var child in node.Children.Entries)  // all subsequent words are a match
+            {
+                buffer.Append(child.Key);
+                foreach (var word in Walk(child.Value, buffer))
+                {
+                    yield return word;
+                }
+                buffer.Length--;
+            }
+        }
+        else
+        {
+            var charToMatch = fragment[matchCount];
+            foreach (var child in node.Children.Entries)
+            {
+                buffer.Append(child.Key);
+                if (charToMatch.IsMatch(child.Key)) // char is a match; try to match any remaining string
+                {
+                    foreach (var word in WalkContaining(child.Value, fragment, buffer, matchCount + 1))
+                    {
+                        yield return word;
+                    }
+                }
+                else // if matchCount == 0 look further, else start over from current node
+                {
+                    Node nextNode;
+                    if (matchCount == 0)
+                    {
+                        nextNode = child.Value;
+                    }
+                    else
+                    {
+                        nextNode = node;
+                        buffer.Length--;
+                    }
+                    foreach (var word in WalkContaining(nextNode, fragment, buffer, 0))
+                    {
+                        yield return word;
+                    }
+                    if (matchCount > 0)
+                    {
+                        break;
+                    }
+                }
+                buffer.Length--;
             }
         }
     }
@@ -818,32 +884,43 @@ public class Trie
     /// Tries to retrieve all values that match the given pattern of characters starting from the given node.
     /// </summary>
     /// <param name="node">The <see cref="Node"/> to start from</param>
-    /// <param name="pattern">The pattern to match</param>
+    /// <param name="pattern">The <see cref="PatternMatch"/> to match</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re-)use</param>
-    /// <param name="matchLength">If <see langword="true"/>, the word length must match the pattern length</param>
     /// <returns>An <see cref="IEnumerable{Object?}"/></returns>
-    private IEnumerable<object?> Walk(Node node, char?[] pattern, StringBuilder buffer, int curDepth, bool matchLength)
+    private IEnumerable<object?> WalkValues(Node node, PatternMatch pattern, StringBuilder buffer, int curDepth)
     {
-        if (pattern.Length == 0)
+        if (pattern.Count == 0)
         {
             var startNode = Root.GetNode(buffer.ToString());
             if (startNode != null)
             {
-                foreach (var value in matchLength ? Walk(startNode, 0, pattern.Length) : Walk(startNode))
+                if (pattern.Type == PatternMatchType.IsWord )
                 {
-                    yield return value;
+                    if (startNode.IsWord)
+                    {
+                        yield return startNode.Value;
+                    }
+                }
+                else
+                {
+                    {
+                        foreach (var value in Walk(startNode))
+                        {
+                            yield return value;
+                        }
+                    }
                 }
             }
         }
         else
         {
-            var curChar = pattern[0];
-            var childPattern = pattern.Skip(1).ToArray();
-            var childNodes = curChar == null ? node.Children.Entries : node.Children.Entries.Where(kv => kv.Key == curChar);
+            var curMatch = pattern[0];
+            var childPattern = new PatternMatch(pattern.Skip(1), pattern.Type);
+            var childNodes = curMatch.Type == CharMatchType.All ? node.Children.Entries : node.Children.Entries.Where(kv => curMatch.IsMatch(kv.Key));
             foreach (var child in childNodes)
             {
                 buffer.Append(child.Key);
-                foreach (var value in Walk(child.Value, childPattern, buffer, curDepth + 1, matchLength))
+                foreach (var value in WalkValues(child.Value, childPattern, buffer, curDepth + 1))
                 {
                     yield return value;
                 }
@@ -856,10 +933,69 @@ public class Trie
     /// Gets all the values whose keys contain the given string recursively, starting from the given <see cref="Node"/>.
     /// </summary>
     /// <param name="node">The node to start from</param>
+    /// <param name="fragment">The <see cref="PatternMatch"/> to match</param>
+    /// <param name="matchCount">Signifies how many characters have already been matched (i.e. how to proceed)</param>
+    /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
+    private static IEnumerable<object?> WalkValuesContaining(Node node, PatternMatch fragment, int matchCount = 0)
+    {
+        if (fragment.Count == matchCount)
+        {
+            if (node.IsWord) // match
+            {
+                yield return node.Value;
+            }
+            foreach (var child in node.Children.Entries)  // all subsequent words are a match
+            {
+                foreach (var value in Walk(child.Value))
+                {
+                    yield return value;
+                }
+            }
+        }
+        else
+        {
+            var charToMatch = fragment[matchCount];
+            foreach (var child in node.Children.Entries)
+            {
+                if (charToMatch.IsMatch(child.Key)) // char is a match; try to match any remaining string
+                {
+                    foreach (var value in WalkValuesContaining(child.Value, fragment, matchCount + 1))
+                    {
+                        yield return value;
+                    }
+                }
+                else // if matchCount == 0 look further, else start over from current node
+                {
+                    Node nextNode;
+                    if (matchCount == 0)
+                    {
+                        nextNode = child.Value;
+                    }
+                    else
+                    {
+                        nextNode = node;
+                    }
+                    foreach (var value in WalkValuesContaining(nextNode, fragment, 0))
+                    {
+                        yield return value;
+                    }
+                    if (matchCount > 0)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets all the values whose keys contain the given string recursively, starting from the given <see cref="Node"/>.
+    /// </summary>
+    /// <param name="node">The node to start from</param>
     /// <param name="fragment">The string to match</param>
     /// <param name="matchCount">Signifies how many characters have already been matched (i.e. how to proceed)</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
-    private static IEnumerable<object?> Walk(Node node, string fragment, int matchCount = 0)
+    private static IEnumerable<object?> WalkValuesContaining(Node node, string fragment, int matchCount = 0)
     {
         if (fragment.Length == matchCount)
         {
@@ -882,7 +1018,7 @@ public class Trie
             {
                 if (child.Key == charToMatch) // char is a match; try to match any remaining string
                 {
-                    foreach (var value in Walk(child.Value, fragment, matchCount + 1))
+                    foreach (var value in WalkValuesContaining(child.Value, fragment, matchCount + 1))
                     {
                         yield return value;
                     }
@@ -898,7 +1034,7 @@ public class Trie
                     {
                         nextNode = node;
                     }
-                    foreach (var value in Walk(nextNode, fragment, 0))
+                    foreach (var value in WalkValuesContaining(nextNode, fragment, 0))
                     {
                         yield return value;
                     }
