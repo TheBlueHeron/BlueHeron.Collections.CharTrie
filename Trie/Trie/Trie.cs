@@ -98,14 +98,6 @@ public class Trie
     }
 
     /// <summary>
-    /// Clears all words in the <see cref="Trie"/>.
-    /// </summary>
-    public void Clear()
-    {
-        Root.Children.Clear();
-    }
-
-    /// <summary>
     /// Tries to find the given <see cref="string"/> and returns <see langword="true"/> if there is a match.
     /// </summary>
     /// <param name="word">The word to find</param>
@@ -469,7 +461,7 @@ public class Trie
     {
         if (nodes.Count != 0)
         {
-            nodes.Peek().Value.Clear(); // clear the last node
+            nodes.Peek().Value.Children.Clear(); // clear the last node
             Trim(nodes); // trim excess nodes
         }
     }
@@ -484,7 +476,7 @@ public class Trie
     }
 
     /// <summary>
-    /// Removes unneeded <see cref="Node"/>s going up from a <see cref="Node"/> to the root node.
+    /// Removes <see cref="Node"/>s that have become unneeded after removal of one or more words, going up from a <see cref="Node"/> to the root node.
     /// </summary>
     private static void Trim(Stack<KeyValuePair<char, Node>> nodes)
     {
@@ -628,52 +620,55 @@ public class Trie
         }
         else
         {
-            var charToMatch = fragment[matchCount];
-            foreach (var child in node.Children.Entries)
+            if (fragment.Count <= matchCount + node.RemainingDepth)
             {
-                buffer.Append(child.Key);
-                if (charToMatch.IsMatch(child.Key)) // char is a match; try to match any remaining string
+                var charToMatch = fragment[matchCount];
+                foreach (var child in node.Children.Entries)
                 {
-                    var hasResults = false;
-                    foreach (var word in WalkContaining(child.Value, fragment, buffer, matchCount + 1))
+                    buffer.Append(child.Key);
+                    if (charToMatch.IsMatch(child.Key)) // char is a match; try to match any remaining string
                     {
-                        hasResults = true;
-                        yield return word;
+                        var hasResults = false;
+                        foreach (var word in WalkContaining(child.Value, fragment, buffer, matchCount + 1))
+                        {
+                            hasResults = true;
+                            yield return word;
+                        }
+                        if (!hasResults && matchCount == 0) // start over at child level
+                        {
+                            foreach (var word in WalkContaining(child.Value, fragment, buffer, 0))
+                            {
+                                yield return word;
+                            }
+                            continue; // next node at current depth
+                        }
                     }
-                    if (!hasResults && matchCount == 0) // start over at child level [could be optimized when remaining depth is known -> abort if fragment is larger than remaining depth]
+                    else // if matchCount == 0 look further, else restart from current node
                     {
-                        foreach (var word in WalkContaining(child.Value, fragment, buffer, 0))
+                        Node nextNode;
+                        if (matchCount == 0)
+                        {
+                            nextNode = child.Value;
+                        }
+                        else
+                        {
+                            nextNode = node;
+                            matchCount--;
+                            buffer.Length--;
+                        }
+                        foreach (var word in WalkContaining(nextNode, fragment, buffer, matchCount))
                         {
                             yield return word;
                         }
-                        continue; // next node at current depth
+                        if (matchCount > 0)
+                        {
+                            break;
+                        }
                     }
-                }
-                else // if matchCount == 0 look further, else start over from current node
-                {
-                    Node nextNode;
-                    if (matchCount == 0)
+                    if (buffer.Length > 0)
                     {
-                        nextNode = child.Value;
-                    }
-                    else
-                    {
-                        nextNode = node;
-                        matchCount--;
                         buffer.Length--;
                     }
-                    foreach (var word in WalkContaining(nextNode, fragment, buffer, matchCount))
-                    {
-                        yield return word;
-                    }
-                    if (matchCount > 0)
-                    {
-                        break;
-                    }
-                }
-                if (buffer.Length > 0)
-                {
-                    buffer.Length--;
                 }
             }
         }
@@ -753,45 +748,48 @@ public class Trie
         }
         else
         {
-            var charToMatch = fragment[matchCount];
-            foreach (var child in node.Children.Entries)
+            if (fragment.Count <= matchCount + node.RemainingDepth)
             {
-                if (charToMatch.IsMatch(child.Key)) // char is a match; try to match any remaining string
+                var charToMatch = fragment[matchCount];
+                foreach (var child in node.Children.Entries)
                 {
-                    var hasResults = false;
-                    foreach (var value in WalkValuesContaining(child.Value, fragment, matchCount + 1))
+                    if (charToMatch.IsMatch(child.Key)) // char is a match; try to match any remaining string
                     {
-                        hasResults = true;
-                        yield return value;
+                        var hasResults = false;
+                        foreach (var value in WalkValuesContaining(child.Value, fragment, matchCount + 1))
+                        {
+                            hasResults = true;
+                            yield return value;
+                        }
+                        if (!hasResults && matchCount == 0) // start over at child level
+                        {
+                            foreach (var value in WalkValuesContaining(child.Value, fragment, 0))
+                            {
+                                yield return value;
+                            }
+                        }
                     }
-                    if (!hasResults && matchCount == 0) // start over at child level [could be optimized when  remaining depth is known -> abort if fragment is larger than remaining depth]
+                    else // if matchCount == 0 look further, else restart from current node
                     {
-                        foreach (var value in WalkValuesContaining(child.Value, fragment, 0))
+                        Node nextNode;
+
+                        if (matchCount == 0)
+                        {
+                            nextNode = child.Value;
+                        }
+                        else
+                        {
+                            matchCount--;
+                            nextNode = node;
+                        }
+                        foreach (var value in WalkValuesContaining(nextNode, fragment, matchCount))
                         {
                             yield return value;
                         }
-                    }
-                }
-                else // if matchCount == 0 look further, else restart
-                {
-                    Node nextNode;
-
-                    if (matchCount == 0)
-                    {
-                        nextNode = child.Value;
-                    }
-                    else
-                    {
-                        matchCount--;
-                        nextNode = node;
-                    }
-                    foreach (var value in WalkValuesContaining(nextNode, fragment, matchCount))
-                    {
-                        yield return value;
-                    }
-                    if (matchCount > 0) // no need to look further
-                    {
-                        break;
+                        if (matchCount > 0) // no need to look further
+                        {
+                            break;
+                        }
                     }
                 }
             }

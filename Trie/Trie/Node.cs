@@ -16,41 +16,29 @@ public class Node
     private int mNumWords;
     private int mRemainingDepth;
     private readonly DenseMap<char, Node> mChildren;
-    private static readonly EqualityComparer<char> mComparer;
+    private static readonly EqualityComparer<char> mComparer = EqualityComparer<char>.Default;
 
     #endregion
 
     #region Construction
 
     /// <summary>
-    /// Initializes the static <see cref="EqualityComparer{Char}"/> needed by the <see cref="Nodes"/> dictionary.
+    /// Creates a new <see cref="Node"/> with an empty <see cref="Nodes"/> collection, <see cref="NumWords"/>, <see cref="NumChildren"/> and <see cref="RemainingDepth"/> set to 0 if <paramref name="isDeserialized"/> is <see langword="true"/>, else to -1 (i.e. unset, which causes calculation of these values upon first access).
     /// </summary>
-    static Node()
+    internal Node(bool isDeserialized)
     {
-        mComparer = EqualityComparer<char>.Default;
+        var num = isDeserialized ? 0 : -1;
+
+        mChildren = new DenseMap<char, Node>(8, 0.5, mComparer);
+        mNumChildren = num;
+        mRemainingDepth = num;
+        mNumWords = num;
     }
 
     /// <summary>
     /// Creates a new <see cref="Node"/> with an empty <see cref="Nodes"/> collection and <see cref="NumWords"/> set to -1 (i.e. unset).
     /// </summary>
-    public Node()
-    {
-        mChildren = new DenseMap<char, Node>(8, 0.5, mComparer);
-        mNumChildren = -1; // -1: unset
-        mNumWords = -1;
-        mRemainingDepth = -1;
-    }
-
-    /// <summary>
-    /// Creates a new <see cref="Node"/> with an empty <see cref="Nodes"/> collection, <see cref="IsWord"/> set to <see langword="true"/> and <see cref="NumChildren"> and <see cref="RemainingDepth"/> set to 0.
-    /// </summary>
-    internal Node(bool isDeserialized)
-    {
-        mChildren = new DenseMap<char, Node>(8, 0.5, mComparer);
-        mNumChildren = 0;
-        mRemainingDepth = 0;
-        mNumWords = 0;
-    }
+    public Node() : this(false) { }
 
     #endregion
 
@@ -135,15 +123,6 @@ public class Node
     #region Public methods and functions
 
     /// <summary>
-    /// Removes all child <see cref="Node"/>s from this <see cref="Node"/>.
-    /// </summary>
-    public void Clear()
-    {
-        mChildren.Clear();
-        mNumWords = -1;
-    }
-
-    /// <summary>
     /// Returns the child <see cref="Node"/> that represent the given <see cref="char"/> if it exists, else <see langword="null"/>.
     /// </summary>
     /// <param name="character">The <see cref="char"/> to match</param>
@@ -176,12 +155,6 @@ public class Node
         }
         return node;
     }
-
-    /// <summary>
-    /// Returns all child <see cref="Node"/>s as an <see cref="IEnumerable{Node}"/>.
-    /// </summary>
-    /// <returns>An <see cref="IEnumerable{Node}"/></returns>
-    public IEnumerable<Node> GetNodes() => mChildren.Values;
 
     #endregion
 }
