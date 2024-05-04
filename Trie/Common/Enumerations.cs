@@ -2,25 +2,6 @@
 namespace BlueHeron.Collections.Trie.Search;
 
 /// <summary>
-/// Enumeration of possible ways to match a character with the <see cref="CharMatch"/>.
-/// </summary>
-public enum CharMatchType
-{
-    /// <summary>
-    /// Only the first character matched is considered when proceeding down the trie.
-    /// </summary>
-    First = 0,
-    /// <summary>
-    /// All matched characters are considered when proceeding down the trie.
-    /// </summary>
-    Any = 1,
-    /// <summary>
-    /// All encountered characters are a match.
-    /// </summary>
-    All = 2
-}
-
-/// <summary>
 /// Enumeration of possible ways to match a word with the <see cref="PatternMatch"/>.
 /// </summary>
 public enum PatternMatchType

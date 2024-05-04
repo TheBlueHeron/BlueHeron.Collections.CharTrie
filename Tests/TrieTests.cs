@@ -44,11 +44,11 @@ public class A_TrieTests
     public void Traversal()
     {
         var trie =  Create();
-        var words = trie.Find(string.Empty); // find all
+        var words = trie.Find(string.Empty,true); // find all
 
         Assert.IsTrue(words != null && words.ToList().Count == 6);
 
-        words = trie.Find("woord");
+        words = trie.Find("woord", true);
         Assert.IsTrue(words != null && words.ToList().Count == 2);
     }
 
@@ -58,9 +58,9 @@ public class A_TrieTests
         var trie = Create();
         IEnumerable<string> words;
         
-        words = trie.FindContaining("oo"); // same as string.Contains("oo")
+        words = trie.Find("oo", false); // same as string.Contains("oo")
         Assert.IsTrue(words.Count() == 3);
-        words = trie.FindContaining("ord");
+        words = trie.Find("ord", false);
         Assert.IsTrue(words.Count() == 3);
     }
 
@@ -73,7 +73,7 @@ public class A_TrieTests
         Assert.IsTrue(!string.IsNullOrEmpty(json));
         var reconstituted = JsonSerializer.Deserialize<Trie>(json);
         Assert.IsTrue(reconstituted != null && reconstituted.NumWords == trie.NumWords);
-        Assert.IsTrue(reconstituted.Find("w").ToList().Count == 3);
+        Assert.IsTrue(reconstituted.Find("w", true).ToList().Count == 3);
     }
 
     [TestMethod]
@@ -129,7 +129,7 @@ public class B_TrieMapTests
     public void Traversal()
     {
         var trie = Create();
-        var values = trie.FindValues((string?)null).ToList();
+        var values = trie.FindValues(string.Empty, true).ToList(); // find all
         var blExistsVal = trie.Exists(3.0f); // should exist
 
         Assert.IsTrue(values.Count == 6 && blExistsVal);
@@ -153,9 +153,9 @@ public class B_TrieMapTests
         var trie = Create();
         IEnumerable<object?> values;
 
-        values = trie.FindValuesContaining("oo");
+        values = trie.FindValues("oo", false);
         Assert.IsTrue(values.Count() == 3);
-        values = trie.FindValuesContaining("ord");
+        values = trie.FindValues("ord", false);
         Assert.IsTrue(values.Count() == 3);
     }
 
@@ -168,7 +168,7 @@ public class B_TrieMapTests
         Assert.IsTrue(!string.IsNullOrEmpty(json));
         var reconstituted = JsonSerializer.Deserialize<Trie>(json);
         Assert.IsTrue(reconstituted != null && reconstituted.NumWords == trie.NumWords);
-        Assert.IsTrue(reconstituted.Find("w").ToList().Count == 3);
+        Assert.IsTrue(reconstituted.Find("w", true).ToList().Count == 3);
         
         var node = trie.GetNode("logos");
 
@@ -298,6 +298,25 @@ public class C_PatternMatchTests
     }
 
     [TestMethod]
+    public void WordMatchingWithValues()
+    {
+        var trie = B_TrieMapTests.Create();
+
+        if (trie != null)
+        {
+            IEnumerable<object?> values;
+            var wordPattern = new PatternMatch() { Type = PatternMatchType.IsWord };
+
+            wordPattern.AddRange([CharMatch.Wildcard, new CharMatch('o'), CharMatch.Wildcard, new CharMatch('o')]); // where second and fourth letter is an 'o'
+            values = trie.FindValues(wordPattern); // where second and fourth letter is an 'o' and word is 4 letters long
+            Assert.IsFalse(values.Any());
+            wordPattern.Add(CharMatch.Wildcard);
+            values = trie.Find(wordPattern); // where second and fourth letter is an 'o' and word is 5 letters long
+            Assert.IsTrue(values.Count() == 1); // logos :)
+        }
+    }
+
+    [TestMethod]
     public void FragmentMatching()
     {
         IEnumerable<string> words;
@@ -335,20 +354,36 @@ public class C_PatternMatchTests
     }
 
     [TestMethod]
+    public void FragmentMatchingWithValues()
+    {
+        var trie = B_TrieMapTests.Create();
+
+        if (trie != null)
+        {
+            IEnumerable<object?> values;
+            // all words that contain the pattern 'o*d' -> 'woord', 'woorden', 'lustoord'
+            var fragmentPattern = new PatternMatch([new CharMatch('o'), CharMatch.Wildcard, new CharMatch('d')], PatternMatchType.IsFragment);
+
+            values = trie.FindValues(fragmentPattern);
+            Assert.IsTrue(values.Count() == 3);
+        }
+    }
+
+    [TestMethod]
     public void Serialization()
     {
         var pattern = new PatternMatch { Type = PatternMatchType.IsWord };
 
         pattern.Add(CharMatch.Wildcard);
-        pattern.Add('q', CharMatchType.Any);
-        pattern.Add('a', ['á', 'à', 'ä'], CharMatchType.All);
+        pattern.Add('q');
+        pattern.Add('a', ['á', 'à', 'ä']);
         
         var json = JsonSerializer.Serialize(pattern);
         var reconstituded = JsonSerializer.Deserialize<PatternMatch>(json);
 
         Assert.IsNotNull(reconstituded);
         Assert.IsTrue(pattern.Count == reconstituded.Count);
-        Assert.IsTrue(reconstituded[0].Type == pattern[0].Type);
+        Assert.IsTrue(reconstituded[0].Primary == null);
         Assert.IsTrue(reconstituded[1].Primary == pattern[1].Primary);
         Assert.IsTrue(reconstituded[2].Alternatives?.Length == pattern[2].Alternatives?.Length && reconstituded[2].Alternatives?[0] == pattern[2].Alternatives?[0] && reconstituded[2].Alternatives?[1] == pattern[2].Alternatives?[1] && reconstituded[2].Alternatives?[2] == pattern[2].Alternatives?[2]);
     }

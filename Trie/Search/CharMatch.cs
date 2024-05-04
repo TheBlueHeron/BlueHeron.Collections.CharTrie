@@ -4,39 +4,32 @@ using System.Text.Json.Serialization;
 namespace BlueHeron.Collections.Trie.Search;
 
 /// <summary>
-/// Container for details on matching a primary in a pattern match.
+/// Container for details on matching a character in a pattern match.
 /// </summary>
-/// <param name="character">The primary primary to match</param>
-/// <param name="alternatives">Optional alternative characters to match</param>
-/// <param name="matchType">The <see cref="CharMatchType"/> to use</param>
-[DebuggerDisplay("{Type}: {Primary} ({Alternatives})")]
+[DebuggerDisplay("{Primary} ({Alternatives})")]
+[DebuggerStepThrough()]
 public class CharMatch
 {
     #region Objects and variables
 
-    private static readonly CharMatch mWildCard = new();
+    private readonly bool mCheckAlternatives;
+    private static readonly CharMatch mWildCard = new(null, null);
 
     #endregion
 
     #region Properties
 
     /// <summary>
-    /// Gets an array of characters to match if the primary primary was not matched.
+    /// Gets an array of characters to match if the primary character was not matched.
     /// </summary>
     [JsonPropertyName("a")]
     public char[]? Alternatives { get; }
 
     /// <summary>
-    /// Gets the primary for which to find a match first.
+    /// Gets the character for which to find a match first.
     /// </summary>
     [JsonPropertyName("p")]
     public char? Primary { get; }
-
-    /// <summary>
-    /// Gets the <see cref="CharMatchType"/> determining the way to match characters. Default: <see cref="CharMatchType.First"/>.
-    /// </summary>
-    [JsonPropertyName("t")]
-    public CharMatchType Type { get; }
 
     /// <summary>
     /// Gets a <see cref="CharMatch"/> that always is a match.
@@ -52,11 +45,9 @@ public class CharMatch
     /// Creates a new <see cref="CharMatch"/>.
     /// </summary>
     /// <param name="primary">The primary for which to find a match first</param>
-    /// <param name="type">A <see cref="CharMatchType"/> determining the way to match characters</param>
-    public CharMatch(char? primary, CharMatchType type = CharMatchType.First)
+    public CharMatch(char primary)
     {
         Primary = primary;
-        Type = type;
     }
 
     /// <summary>
@@ -66,17 +57,11 @@ public class CharMatch
     /// <param name="alternatives">Optional array of characters to match if the primary primary was not matched</param>
     /// <param name="type">A <see cref="CharMatchType"/> determining the way to match characters</param>
     [JsonConstructor()]
-    public CharMatch(char? primary, char[]? alternatives, CharMatchType type = CharMatchType.First) : this(primary, type)
+    public CharMatch(char? primary, char[]? alternatives)
     {
+        Primary = primary;
         Alternatives = alternatives;
-    }
-
-    /// <summary>
-    /// Private constructor to create a <see cref="CharMatch"/> that represents a wildcard.
-    /// </summary>
-    private CharMatch()
-    {
-        Type = CharMatchType.All;
+        mCheckAlternatives = Alternatives != null && Alternatives.Length > 0;
     }
 
     #endregion
@@ -84,13 +69,13 @@ public class CharMatch
     #region Public methods and functions
 
     /// <summary>
-    /// Returns a boolean, determining whether the given primary is a match for this <see cref="CharMatch"/>.
+    /// Returns a boolean, determining whether the given character is a match for this <see cref="CharMatch"/>.
     /// </summary>
-    /// <param name="character">The primary to match</param>
-    /// <returns>Boolean, <see langword="true"/> if the primary is a match</returns>
+    /// <param name="character">The character to match</param>
+    /// <returns>Boolean, <see langword="true"/> if the character is a match</returns>
     public bool IsMatch(char character)
     {
-        if (Type == CharMatchType.All)
+        if (Primary == null)
         {
             return true;
         }
@@ -98,9 +83,9 @@ public class CharMatch
         {
             return true;
         }
-        if (Alternatives != null && Alternatives.Length > 0)
+        if (mCheckAlternatives)
         {
-            for (var i = 0; i < Alternatives.Length; i++)
+            for (var i = 0; i < Alternatives?.Length; i++)
             {
                 if (Alternatives[i] == character)
                 {

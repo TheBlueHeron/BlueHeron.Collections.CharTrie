@@ -13,6 +13,7 @@ public class NodeConverter : JsonConverter<Node>
 
     private const string _C = "c"; // NumChildren
     private const string _N = "n"; // NumWords
+    private const string _R = "r"; // RemainingDepth
     private const string _T = "t"; // TypeIndex
     private const string _V = "v"; // Value
     private const string _W = "w"; // IsWord
@@ -135,7 +136,7 @@ public class NodeConverter : JsonConverter<Node>
     /// <inheritdoc/>
     public override Node? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var node = new Node();
+        var node = new Node(true);
 
         while (reader.Read())
         {
@@ -152,6 +153,10 @@ public class NodeConverter : JsonConverter<Node>
                         case _N:
                             reader.Read();
                             node.NumWords = reader.GetInt32();
+                            break;
+                        case _R:
+                            reader.Read();
+                            node.RemainingDepth = reader.GetInt32();
                             break;
                         case _W:
                             reader.Read();
@@ -182,8 +187,18 @@ public class NodeConverter : JsonConverter<Node>
         {
             writer.WriteNumber(_W, 1);
         }
-        writer.WriteNumber(_C, value.NumChildren);
-        writer.WriteNumber(_N,value.NumWords);
+        if (value.NumChildren > 0)
+        {
+            writer.WriteNumber(_C, value.NumChildren);
+        }
+        if (value.NumWords > 0)
+        {
+            writer.WriteNumber(_N, value.NumWords);
+        }
+        if (value.RemainingDepth > 0)
+        {
+            writer.WriteNumber(_R, value.RemainingDepth);
+        }
         WriteValue(writer, value, options);
         writer.WriteEndObject();
     }

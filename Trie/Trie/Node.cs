@@ -14,6 +14,7 @@ public class Node
 
     private int mNumChildren;
     private int mNumWords;
+    private int mRemainingDepth;
     private readonly DenseMap<char, Node> mChildren;
     private static readonly EqualityComparer<char> mComparer;
 
@@ -37,6 +38,18 @@ public class Node
         mChildren = new DenseMap<char, Node>(8, 0.5, mComparer);
         mNumChildren = -1; // -1: unset
         mNumWords = -1;
+        mRemainingDepth = -1;
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="Node"/> with an empty <see cref="Nodes"/> collection, <see cref="IsWord"/> set to <see langword="true"/> and <see cref="NumChildren"> and <see cref="RemainingDepth"/> set to 0.
+    /// </summary>
+    internal Node(bool isDeserialized)
+    {
+        mChildren = new DenseMap<char, Node>(8, 0.5, mComparer);
+        mNumChildren = 0;
+        mRemainingDepth = 0;
+        mNumWords = 0;
     }
 
     #endregion
@@ -89,6 +102,22 @@ public class Node
             return mNumWords;
         }
         internal set => mNumWords = value;
+    }
+
+    /// <summary>
+    /// Gets the maximum depth of the remaining hierarchy of nodes.
+    /// </summary>
+    public int RemainingDepth
+    {
+        get
+        {
+            if (mRemainingDepth < 0)
+            {
+                mRemainingDepth = mChildren.Count == 0 ? 0 : 1 + Nodes.Max(c => c.Value.RemainingDepth);
+            }
+            return mRemainingDepth;
+        }
+        internal set => mRemainingDepth = value;
     }
 
     /// <summary>

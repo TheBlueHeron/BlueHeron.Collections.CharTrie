@@ -1,9 +1,11 @@
-﻿
+﻿using System.Diagnostics;
+
 namespace BlueHeron.Collections.Trie.Search;
 
 /// <summary>
 /// A <see cref="List{CharMatch}"/> that represents a pattern of characters, including wildcards.
 /// </summary>
+[DebuggerStepThrough()]
 public class PatternMatch : List<CharMatch>
 {
     #region Properties
@@ -35,10 +37,9 @@ public class PatternMatch : List<CharMatch>
     /// Adds a <see cref="CharMatch"/> to the collection.
     /// </summary>
     /// <param name="character">The chharacter to match</param>
-    /// <param name="type">The <see cref="CharMatchType"/></param>
-    public void Add(char? character, CharMatchType type = CharMatchType.First)
+    public void Add(char character)
     {
-        Add(new CharMatch(character, type));
+        Add(new CharMatch(character));
     }
 
     /// <summary>
@@ -46,10 +47,39 @@ public class PatternMatch : List<CharMatch>
     /// </summary>
     /// <param name="character">The chharacter to match</param>
     /// <param name="alternatives">Option array of alternative characters to match</param>
-    /// <param name="type">The <see cref="CharMatchType"/></param>
-    public void Add(char? character, char[]? alternatives, CharMatchType type = CharMatchType.First)
+    public void Add(char character, char[]? alternatives)
     {
-        Add(new CharMatch(character, alternatives, type));
+        Add(new CharMatch(character, alternatives));
+    }
+
+    /// <summary>
+    /// Creates a <see cref="PatternMatch"/> representing the given word fragment.
+    /// </summary>
+    /// <param name="fragment">The word fragment</param>
+    /// <returns>A <see cref="PatternMatch"/></returns>
+    public static PatternMatch FromFragment(string fragment)
+    {
+        return new PatternMatch(fragment.ToCharMatchArray(), PatternMatchType.IsFragment);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="PatternMatch"/> representing the given prefix.
+    /// </summary>
+    /// <param name="prefix">The prefix</param>
+    /// <returns>A <see cref="PatternMatch"/></returns>
+    public static PatternMatch FromPrefix(string? prefix)
+    {
+        return new PatternMatch(prefix.ToCharMatchArray(), PatternMatchType.IsPrefix);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="PatternMatch"/> representing the given word.
+    /// </summary>
+    /// <param name="word">The word</param>
+    /// <returns>A <see cref="PatternMatch"/></returns>
+    public static PatternMatch FromWord(string word)
+    {
+        return new PatternMatch(word.ToCharMatchArray(), PatternMatchType.IsWord);
     }
 
     #endregion
