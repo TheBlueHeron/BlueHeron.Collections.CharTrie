@@ -27,12 +27,17 @@ public class Node
     /// </summary>
     internal Node(bool isDeserialized)
     {
-        var num = isDeserialized ? 0 : -1;
-
         mChildren = new DenseMap<char, Node>(8, 0.5, mComparer);
-        mNumChildren = num;
-        mRemainingDepth = num;
-        mNumWords = num;
+        if (isDeserialized)
+        {
+            mNumChildren = 0;
+            mNumWords = 0;
+            mRemainingDepth = 0;
+        }
+        else
+        {
+            Unset();
+        }
     }
 
     /// <summary>
@@ -50,7 +55,7 @@ public class Node
     public IReadOnlyDictionary<char, Node> Nodes => mChildren.Entries.ToDictionary();
 
     /// <summary>
-    /// Gets the internally used <see cref="RobinHoodDictionary{char, Node}"/>.
+    /// Gets the internally used <see cref="DenseMap{char, Node}"/>.
     /// </summary>
     internal DenseMap<char, Node> Children => mChildren;
 
@@ -154,6 +159,20 @@ public class Node
             }
         }
         return node;
+    }
+
+    #endregion
+
+    #region Private methods and functions
+
+    /// <summary>
+    /// Sets all numeric fields to -1, forcing recalculation.
+    /// </summary>
+    internal void Unset()
+    {
+        mNumChildren = -1;
+        mNumWords = -1;
+        mRemainingDepth = -1;
     }
 
     #endregion

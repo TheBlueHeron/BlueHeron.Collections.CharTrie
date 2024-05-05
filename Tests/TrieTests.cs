@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using BlueHeron.Collections.Trie.Search;
 
@@ -13,7 +14,7 @@ public class A_TrieTests
         var woordeIsWord = true; // should be set to false
         var trie = Create();
         var totalWords = trie.NumWords;
-        var blExistsWoo = trie.Exists("woo", true);
+        var blExistsWoo = trie.Contains("woo", true);
 
         var node = trie.GetNode("woord");
         if (node != null)
@@ -34,9 +35,9 @@ public class A_TrieTests
     {
         var trie = Create();
 
-        trie.RemovePrefix("woo");
+        trie.Remove("woo", true);
         Assert.IsTrue(trie.NumWords == 4);
-        trie.RemoveWord("wapens");
+        trie.Remove("wapens", false);
         Assert.IsTrue(trie.NumWords == 3);
     }
 
@@ -130,11 +131,11 @@ public class B_TrieMapTests
     {
         var trie = Create();
         var values = trie.FindValues(string.Empty, true).ToList(); // find all
-        var blExistsVal = trie.Exists(3.0f); // should exist
+        var blExistsVal = trie.ContainsValue(3.0f); // should exist
 
         Assert.IsTrue(values.Count == 6 && blExistsVal);
 
-        blExistsVal = trie.Exists(123); // should not exist
+        blExistsVal = trie.ContainsValue(123); // should not exist
         Assert.IsFalse(blExistsVal);
 
         var value = trie.FindValue("zijn");
@@ -407,4 +408,104 @@ public class D_ExtensionsTests
 [TestClass]
 public class E_BenchMarking
 {
+    #region Constants
+
+    private const string fmtHeader = "|            Operation | # Runs | Minimum (탎ec.) | Maximum (탎ec.) | Average (탎ec.) | Median (탎ec.) |";
+    private const string fmtRowBorder = "|----------------------|--------|-----------------|-----------------|-----------------|----------------|";
+    private const string fmtRow = "| {0,20:###} | {1,6:###} | {2,15:##0.0} | {3,15:##0.0} | {4,15:##0.0} | {5,14:##0.0} |";
+
+    #endregion
+
+    [TestMethod]
+    public async Task Run()
+    {
+        List<string> lstWords = [];
+        List<string> lstTestWords = [];
+        BenchMarkResult bmListContains = new();
+        BenchMarkResult bmTrieContains = new();
+
+        var trie = await Trie.LoadAsync(new FileInfo("dictionaries\\nl.json")); // create trie from export created earlier
+        
+        if (trie != null)
+        {
+            var reader = new FileInfo("dictionaries\\nl.dic").OpenText(); // load list of words
+            string? line;
+
+            while (!reader.EndOfStream)
+            {
+                line = reader.ReadLine();
+                if (line != null)
+                {
+                    lstWords.Add(line);
+                }
+            }
+            for (var i = 10; i < lstWords.Count; i += 1000) // create test list (~ 375 words)
+            {
+                lstTestWords.Add(lstWords[i]);
+            }
+
+            lstTestWords = [..lstTestWords.OrderBy(x => Random.Shared.Next())]; // shuffle to improve median calculation accuracy
+
+            foreach (var word in lstTestWords) // x.Contains(...) tests
+            {
+                bmListContains.AddResult(TestListContains(lstWords, word));
+                bmTrieContains.AddResult(TestTrieContains(trie, word));
+
+            }            
+            // prefix test
+            // pattern test
+
+            WriteBenchmarkHeader();
+            WriteBenchmarkRow("List Contains", bmListContains);
+            WriteBenchmarkRow("Trie Contains", bmTrieContains);
+            WriteBenchmarkFooter();
+        }
+    }
+
+    /// <summary>
+    /// Calls <see cref="List{string}.Contains(string)"/> and returns the duration of the call.
+    /// </summary>
+    /// <param name="list">The <see cref="List{string}"/> to use</param>
+    /// <param name="word">The word to find</param>
+    /// <returns>A <see cref="TimeSpan"/></returns>
+    private static TimeSpan TestListContains(List<string> list, string word)
+    {
+        var start = DateTime.Now;
+
+        _ = list.Contains(word);
+
+        return DateTime.Now - start; 
+    }
+
+    /// <summary>
+    /// Calls <see cref="Trie.Contains(string, bool)"/> and returns the duration of the call.
+    /// </summary>
+    /// <param name="trie">The <see cref="Trie"/> to use</param>
+    /// <param name="word">The word to find</param>
+    /// <returns>A <see cref="TimeSpan"/></returns>
+    private static TimeSpan TestTrieContains(Trie trie, string word)
+    {
+        var start = DateTime.Now;
+
+        _ = trie.Contains(word, false);
+
+        return DateTime.Now - start;
+    }
+
+    private static void WriteBenchmarkFooter()
+    {
+        Debug.WriteLine(fmtRowBorder);
+    }
+
+    private static void WriteBenchmarkHeader()
+    {
+        Debug.WriteLine(fmtRowBorder);
+        Debug.WriteLine(fmtHeader);
+        Debug.WriteLine(fmtRowBorder);
+    }
+
+    private static void WriteBenchmarkRow(string testName, BenchMarkResult row)
+    {
+        Debug.WriteLine(fmtRow, testName, row.NumTests, row.MinDuration, row.MaxDuration, row.AverageDuration, row.MedianDuration);
+    }
 }

@@ -140,7 +140,7 @@ public sealed class TrieConverter : JsonConverter<Trie>
         }
         writer.WritePropertyName(_N);
         writer.WriteStartArray();
-        foreach (var item in value.Walk()) // serialize Trie nodes as an array of nodes
+        foreach (var item in value.AsEnumerable()) // serialize Trie nodes as an array of nodes
         {
             writer.WriteStartObject();
             writer.WritePropertyName($"{item.Key}");

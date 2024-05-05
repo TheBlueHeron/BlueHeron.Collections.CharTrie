@@ -23,7 +23,7 @@ public class NodeConverter : JsonConverter<Node>
     #region Private methods and functions
 
     /// <summary>
-    /// Reads the value of and sets it on the node.
+    /// Reads and sets the <see cref="Node.Value"/>.
     /// </summary>
     /// <param name="reader">The <see cref="Utf8JsonReader"/> containing the data</param>
     /// <param name="node">The <see cref="Node"/>, whose value to deserialize</param>
@@ -114,7 +114,7 @@ public class NodeConverter : JsonConverter<Node>
     }
 
     /// <summary>
-    /// Writes the value of the node.
+    /// Writes the <see cref="Node.Value"/>.
     /// </summary>
     /// <param name="writer">The <see cref="Utf8JsonWriter"/> to write to</param>
     /// <param name="node">The <see cref="Node"/> whose value to serialize</param>

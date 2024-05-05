@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace BlueHeron.Collections.Trie.Search;
 
 /// <summary>
-/// Container for details on matching a character in a pattern match.
+/// Container for details on matching a character in a <see cref="PatternMatch"/>.
 /// </summary>
 [DebuggerDisplay("{Primary} ({Alternatives})")]
 [DebuggerStepThrough()]
@@ -20,13 +20,14 @@ public class CharMatch
     #region Properties
 
     /// <summary>
-    /// Gets an array of characters to match if the primary character was not matched.
+    /// Gets an array of characters to match if the <see cref="Primary"/> character was not matched.
     /// </summary>
     [JsonPropertyName("a")]
     public char[]? Alternatives { get; }
 
     /// <summary>
     /// Gets the character for which to find a match first.
+    /// If <see langword="null"/>, this <see cref="CharMatch"/> functions as a wildcard (and <see cref="Alternatives"/>`are ignored).
     /// </summary>
     [JsonPropertyName("p")]
     public char? Primary { get; }

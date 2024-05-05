@@ -30,12 +30,12 @@ public class Trie
     #region Properties
 
     /// <summary>
-    /// Returns the total number of words in this <see cref="Trie{TNode}"/>.
+    /// Returns the total number of words in this <see cref="Trie"/>.
     /// </summary>
     public int NumWords => RootNode.NumWords;
 
     /// <summary>
-    /// The root <see cref="TNode"/>.
+    /// The root <see cref="Node"/>.
     /// </summary>
     public Node Root => RootNode;
 
@@ -55,7 +55,7 @@ public class Trie
     internal Node RootNode { get; set; } = new Node();
 
     /// <summary>
-    /// Providse access to the list of registered types for the <see cref="Serialization.NodeConverter"/> that needs it when deserializing nodes.
+    /// Provides access to the list of registered types for the <see cref="NodeConverter"/> that needs it when deserializing nodes.
     /// </summary>
     internal static List<string> Types => mRegisteredTypes;
 
@@ -98,12 +98,21 @@ public class Trie
     }
 
     /// <summary>
+    /// Walks depth-first through the tree and returns every <see cref="Node"/> that is encountered, accompanied with its key.
+    /// </summary>
+    /// <returns>An <see cref="IEnumerable{KeyValuePair{char, Node}}"/></returns>
+    public IEnumerable<KeyValuePair<char, Node>> AsEnumerable()
+    {
+        return Walk(new KeyValuePair<char, Node>(_rootChar, RootNode));
+    }
+
+    /// <summary>
     /// Tries to find the given <see cref="string"/> and returns <see langword="true"/> if there is a match.
     /// </summary>
     /// <param name="word">The word to find</param>
     /// <param name="isPrefix">If <see langword="true"/> return <see langword="true"/> if words starting with the given word exist, else only return <see langword="true"/> if an exact match is present</param>
     /// <returns>Boolean, <see langword="true"/> if the word exists in the <see cref="Trie"/></returns>
-    public bool Exists(string word, bool isPrefix)
+    public bool Contains(string word, bool isPrefix)
     {
         var node = Root;
 
@@ -124,7 +133,7 @@ public class Trie
     /// </summary>
     /// <param name="value">The value> to find</param>
     /// <returns>Boolean, <see langword="true"/> if the value exists in the <see cref="Trie"/></returns>
-    public bool Exists(object value)
+    public bool ContainsValue(object value)
     {
         if (value is null)
         {
@@ -144,7 +153,7 @@ public class Trie
     /// Gets all words that match the given fragment.
     /// </summary>
     /// <param name="fragment">The <see cref="string"/> to match; if <see langword="null"/>: all words are returned</param>
-    /// <param name="isPrefix">If <see langword="true"/>, the fragment is a prefix</param>
+    /// <param name="isPrefix">If <see langword="true"/>, the word should start with this fragment</param>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
     public IEnumerable<string> Find(string fragment, bool isPrefix)
     {
@@ -155,9 +164,9 @@ public class Trie
     }
 
     /// <summary>
-    /// Tries to retrieve all words that match the given <see cref="PatternMatch">.
+    /// Tries to retrieve all words that match the given <see cref="PatternMatch"/>.
     /// </summary>
-    /// <param name="pattern">The <see cref="PatternMatch"> to match/param>
+    /// <param name="pattern">The <see cref="PatternMatch"> to match</param>
     /// <returns>An <see cref="IEnumerable{string}"/> containing all words that match the pattern</returns>
     public IEnumerable<string> Find(PatternMatch pattern)
     {
@@ -189,8 +198,8 @@ public class Trie
     /// Gets all values that match the given fragment.
     /// </summary>
     /// <param name="fragment">The <see cref="string"/> to match; if <see langword="null"/>: all words are returned</param>
-    /// <param name="isPrefix">If <see langword="true"/>, the fragment is a prefix</param>
-    /// <returns>An <see cref="IEnumerable{Object?}"/></returns>
+    /// <param name="isPrefix">If <see langword="true"/>, the word should start with this fragment</param>
+    /// <returns>An <see cref="IEnumerable{object?}"/></returns>
     public IEnumerable<object?> FindValues(string fragment, bool isPrefix)
     {
         foreach (var value in FindValues(isPrefix ? PatternMatch.FromPrefix(fragment) : PatternMatch.FromFragment(fragment)))
@@ -200,10 +209,10 @@ public class Trie
     }
 
     /// <summary>
-    /// Tries to retrieve all values that match the given pattern of characters.
+    /// Tries to retrieve all values that match the given <see cref="PatternMatch"/>.
     /// </summary>
     /// <param name="pattern">The <see cref="PatternMatch"/> to match</param>
-    /// <returns>An <see cref="IEnumerable{Object?}"/> containing the value of all nodes that match the pattern</returns>
+    /// <returns>An <see cref="IEnumerable{object?}"/> containing the value of all nodes that match the <see cref="PatternMatch"/></returns>
     public IEnumerable<object?> FindValues(PatternMatch pattern)
     {
         foreach (var word in pattern.Type == PatternMatchType.IsFragment ?
@@ -215,7 +224,7 @@ public class Trie
     }
 
     /// <summary>
-    /// Gets the <see cref="Node"/> in this <see cref="Trie"/> that represents the given prefix, if it exists. Else <see langword="null"/>.
+    /// Gets the <see cref="Node"/> in this <see cref="Trie"/> that represents the given prefix, if it exists. Else <see langword="null"/> is returned.
     /// </summary>
     /// <param name="prefix">The <see cref="string"/> to match</param>
     /// <returns>A <see cref="Node"/> representing the given <see cref="string"/>, else <see langword="null"/></returns>
@@ -243,11 +252,31 @@ public class Trie
     }
 
     /// <summary>
+    /// Removes all words matching the given prefix from the <see cref="Trie"/>.
+    /// </summary>
+    /// <param name="fragment">The fragment to match</param>
+    /// <param name="isPrefix">If <see langword="true"/>, the word should start with this fragment</param>
+    public void Remove(string fragment, bool isPrefix)
+    {
+        ArgumentNullException.ThrowIfNull(fragment);
+        if (isPrefix)
+        {
+            RemovePrefix(AsStack(fragment, false));
+        }
+        else
+        {
+            RemoveWord(AsStack(fragment));
+        }
+    }
+
+    #region IO
+
+    /// <summary>
     /// Exports this <see cref="Trie"/> to the file with the given name asynchronously.
     /// </summary>
     /// <param name="fileName">The full path and file name, including extension</param>
     /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
-    /// <returns>A <see cref="Task{Boolean}"/>, signifying the result of the operation</returns>
+    /// <returns>A <see cref="bool"/>, signifying the result of the operation</returns>
     /// <exception cref="InvalidOperationException">The file could not be created or written to</exception>
     public async Task<bool> ExportAsync(string fileName, JsonSerializerOptions? options = null)
     {
@@ -270,11 +299,11 @@ public class Trie
     }
 
     /// <summary>
-    /// Creates a new <see cref="Trie"/> and tries to import all words in the given text file asynchronously. One word per line is expected.
-    /// Whitespace is trimmed. Empty lines are ignored.
+    /// Creates a new <see cref="Trie"/> and tries to import all words in the given text file asynchronously.
+    /// One word per line is expected, whitespace is trimmed and empty lines will be ignored.
     /// </summary>
     /// <param name="fi">The <see cref="FileInfo"/></param>
-    /// <returns>A <see cref="Task{Trie?}"/></returns>
+    /// <returns>A <see cref="Trie?"/></returns>
     /// <exception cref="InvalidOperationException">The file could not be opened and read as a text file.</exception>
     public static async Task<Trie?> ImportAsync(FileInfo fi)
     {
@@ -316,7 +345,7 @@ public class Trie
     /// </summary>
     /// <param name="fi">The <see cref="FileInfo"/></param>
     /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
-    /// <returns>A <see cref="Task{Trie}"/></returns>
+    /// <returns>A <see cref="Trie?"/></returns>
     /// <exception cref="InvalidOperationException">The file could not be opened and read as a text file or its contents could not be parsed into a <see cref="Trie"/>.</exception>
     public static async Task<Trie?> LoadAsync(FileInfo fi, JsonSerializerOptions? options = null)
     {
@@ -337,33 +366,7 @@ public class Trie
         return trie;
     }
 
-    /// <summary>
-    /// Removes all words matching the given prefix from the <see cref="Trie"/>.
-    /// </summary>
-    public void RemovePrefix(string prefix)
-    {
-        ArgumentNullException.ThrowIfNull(prefix);
-        RemovePrefix(AsStack(prefix, false));
-    }
-
-    /// <summary>
-    /// Removes the given word from the <see cref="Trie"/>.
-    /// </summary>
-    /// <returns>An <see cref="int"/> determining the number of words removed</returns>
-    public void RemoveWord(string word)
-    {
-        ArgumentNullException.ThrowIfNull(word);
-        RemoveWord(AsStack(word));
-    }
-
-    /// <summary>
-    /// Walks depth-first through the tree and returns every <see cref="Node"/> that is encountered, accompanied with its key.
-    /// </summary>
-    /// <returns>An <see cref="IEnumerable{KeyValuePair{char, Node}}"/></returns>
-    public IEnumerable<KeyValuePair<char, Node>> Walk()
-    {
-        return Walk(new KeyValuePair<char, Node>(_rootChar, RootNode));
-    }
+    #endregion
 
     #endregion
 
@@ -374,14 +377,13 @@ public class Trie
     /// </summary>
     /// <param name="word">The word to add</param>
     /// <returns>A <see cref="Node"/></returns>
-    protected Node AddWord(string word)
+    private Node AddWord(string word)
     {
         var node = Root;
 
         foreach (var c in word)
         {
-            node.NumChildren = -1; // force recalculation
-            node.NumWords = -1;
+            node.Unset(); // force recalculation
             if (!node.Children.Get(c, out var value))
             {
                 value = new Node();
@@ -397,7 +399,7 @@ public class Trie
     /// Gets the <see cref="Node"/>s that form the given string as a <see cref="Stack{KeyValuePair{char, Node}}"/>.
     /// </summary>
     /// <param name="s">The <see cref="string"/> to match</param>
-    /// <param name="isWord">The <paramref name="s"/> parameter is a word (i.e. not a prefix)</param>
+    /// <param name="isWord">The <paramref name="s"/> parameter is a word and not a prefix</param>
     /// <returns>A <see cref="Stack{KeyValuePair{char, Node}}"/></returns>
     private Stack<KeyValuePair<char, Node>> AsStack(string s, bool isWord = true)
     {
@@ -426,9 +428,9 @@ public class Trie
     }
 
     /// <summary>
-    /// Returns the first word that carries the given <value, starting from the given node.
+    /// Returns the first word that carries the given <see cref="Node.Value"/>, starting from the given node.
     /// </summary>
-    /// <param name="sb">The <see cref="StringBuilder"/> to use</param>
+    /// <param name="chars">The <see cref="List{char}"/> to append characters to</param>
     /// <param name="node">The <see cref="Node"/> from which to start</param>
     /// <param name="value">The value> of which to find the word</param>
     private static bool GetWord(List<char> chars, Node node, object value)
@@ -459,11 +461,8 @@ public class Trie
     /// </summary>
     private static void RemovePrefix(Stack<KeyValuePair<char, Node>> nodes)
     {
-        if (nodes.Count != 0)
-        {
-            nodes.Peek().Value.Children.Clear(); // clear the last node
-            Trim(nodes); // trim excess nodes
-        }
+        nodes.Peek().Value.Children.Clear(); // clear the last node
+        Trim(nodes); // trim excess nodes
     }
 
     /// <summary>
@@ -485,18 +484,14 @@ public class Trie
             var node = nodes.Pop();
             var parentNode = nodes.Peek().Value;
 
-            parentNode.NumChildren = -1; // -1: unset
-            parentNode.NumWords = -1;
+            parentNode.Unset(); // force recalculation
             if (node.Value.IsWord || node.Value.Children.Count != 0)
             {
                 break;
             }
             parentNode.Children.Remove(node.Key);
         }
-        var root = nodes.Peek().Value;
-
-        root.NumChildren = -1; // root node to unset as well
-        root.NumWords = -1;
+        nodes.Peek().Value.Unset(); // root node needs to recalculate as well
     }
 
     /// <summary>
@@ -516,10 +511,10 @@ public class Trie
     }
 
     /// <summary>
-    /// Tries to retrieve all words that match the given <see cref="PatternMatch"/> starting from the given node.
+    /// Tries to retrieve all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="Node"/>.
     /// </summary>
     /// <param name="node">The <see cref="Node"/> to start from</param>
-    /// <param name="pattern">The <see cref="PatternMatch"> to use</param>
+    /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
     private static IEnumerable<string> Walk(Node node, PatternMatch pattern, StringBuilder buffer, int length)
@@ -594,10 +589,10 @@ public class Trie
     }
 
     /// <summary>
-    /// Gets all the words that contain the given string recursively, starting from the given <see cref="Node"/>.
+    /// Gets all the words that contain the given <see cref="PatternMatch"/> recursively, starting from the given <see cref="Node"/>.
     /// </summary>
     /// <param name="node">The node to start from</param>
-    /// <param name="fragment">The <see cref="PatternMatch"> to match</param>
+    /// <param name="fragment">The <see cref="PatternMatch"/> to match</param>
     /// <param name="matchCount">Signifies how many characters have already been matched (i.e. how to proceed)</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
     private static IEnumerable<string> WalkContaining(Node node, PatternMatch fragment, StringBuilder buffer, int matchCount = 0)
@@ -620,7 +615,7 @@ public class Trie
         }
         else
         {
-            if (fragment.Count <= matchCount + node.RemainingDepth)
+            if (fragment.Count <= matchCount + node.RemainingDepth) // enough places left for a possible match
             {
                 var charToMatch = fragment[matchCount];
                 foreach (var child in node.Children.Entries)
@@ -643,7 +638,7 @@ public class Trie
                             continue; // next node at current depth
                         }
                     }
-                    else // if matchCount == 0 look further, else restart from current node
+                    else // if matchCount == 0 look further, else start over at current level
                     {
                         Node nextNode;
                         if (matchCount == 0)
@@ -675,12 +670,12 @@ public class Trie
     }
 
     /// <summary>
-    /// Tries to retrieve all values that match the given pattern of characters starting from the given node.
+    /// Tries to retrieve all values that match the given <see cref="PatternMatch"/> starting from the given <see cref="Node"/>.
     /// </summary>
     /// <param name="node">The <see cref="Node"/> to start from</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to match</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re-)use</param>
-    /// <returns>An <see cref="IEnumerable{Object?}"/></returns>
+    /// <returns>An <see cref="IEnumerable{object?}"/></returns>
     private IEnumerable<object?> WalkValues(Node node, PatternMatch pattern, StringBuilder buffer, int curDepth)
     {
         if (pattern.Count == 0)
@@ -724,7 +719,7 @@ public class Trie
     }
 
     /// <summary>
-    /// Gets all the values whose keys contain the given string recursively, starting from the given <see cref="Node"/>.
+    /// Gets all the values whose keys contain the given <see cref="PatternMatch"/> recursively, starting from the given <see cref="Node"/>.
     /// </summary>
     /// <param name="node">The node to start from</param>
     /// <param name="fragment">The <see cref="PatternMatch"/> to match</param>
@@ -769,7 +764,7 @@ public class Trie
                             }
                         }
                     }
-                    else // if matchCount == 0 look further, else restart from current node
+                    else // if matchCount == 0 look further, else start over at current level
                     {
                         Node nextNode;
 

@@ -3,7 +3,7 @@
 namespace BlueHeron.Collections.Trie.Search;
 
 /// <summary>
-/// A <see cref="List{CharMatch}"/> that represents a pattern of characters, including wildcards.
+/// An extended <see cref="List{CharMatch}"/> that represents a pattern of characters, including wildcards.
 /// </summary>
 [DebuggerStepThrough()]
 public class PatternMatch : List<CharMatch>
@@ -36,7 +36,7 @@ public class PatternMatch : List<CharMatch>
     /// <summary>
     /// Adds a <see cref="CharMatch"/> to the collection.
     /// </summary>
-    /// <param name="character">The chharacter to match</param>
+    /// <param name="character">The character to match</param>
     public void Add(char character)
     {
         Add(new CharMatch(character));
@@ -45,7 +45,7 @@ public class PatternMatch : List<CharMatch>
     /// <summary>
     /// Adds a <see cref="CharMatch"/> to the collection.
     /// </summary>
-    /// <param name="character">The chharacter to match</param>
+    /// <param name="character">The character to match</param>
     /// <param name="alternatives">Option array of alternative characters to match</param>
     public void Add(char character, char[]? alternatives)
     {
@@ -53,9 +53,9 @@ public class PatternMatch : List<CharMatch>
     }
 
     /// <summary>
-    /// Creates a <see cref="PatternMatch"/> representing the given word fragment.
+    /// Creates a <see cref="PatternMatch"/> representing the given fragment.
     /// </summary>
-    /// <param name="fragment">The word fragment</param>
+    /// <param name="fragment">The fragment</param>
     /// <returns>A <see cref="PatternMatch"/></returns>
     public static PatternMatch FromFragment(string fragment)
     {
