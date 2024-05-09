@@ -46,7 +46,7 @@ public class CharMatch
     /// Creates a new <see cref="CharMatch"/>.
     /// </summary>
     /// <param name="primary">The primary for which to find a match first</param>
-    public CharMatch(char primary)
+    public CharMatch(char? primary)
     {
         Primary = primary;
     }

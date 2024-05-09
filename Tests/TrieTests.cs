@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using BlueHeron.Collections.Trie.Search;
 
 namespace BlueHeron.Collections.Trie.Tests;
@@ -421,8 +422,18 @@ public class E_BenchMarking
     {
         List<string> lstWords = [];
         List<string> lstTestWords = [];
+        List<string> lstPrefixes = ["aan", "op", "in", "ver", "mee", "hoog", "laag", "tussen", "ter", "over"];
+        List<char?[]> lstPatterns = [['o', 'r', 'd'], ['g', null, 's'], ['o', null, 'o']];
+
         BenchMarkResult bmListContains = new();
         BenchMarkResult bmTrieContains = new();
+        BenchMarkResult bmListPattern = new();
+        BenchMarkResult bmTriePattern = new();
+        BenchMarkResult bmListPrefix = new();
+        BenchMarkResult bmTriePrefix = new();
+
+        Assert.IsTrue(File.Exists("dictionaries\\nl.json"));
+        Assert.IsTrue(File.Exists("dictionaries\\nl.dic"));
 
         var trie = await Trie.LoadAsync(new FileInfo("dictionaries\\nl.json")); // create trie from export created earlier
         
@@ -448,16 +459,44 @@ public class E_BenchMarking
 
             foreach (var word in lstTestWords) // x.Contains(...) tests
             {
-                bmListContains.AddResult(TestListContains(lstWords, word));
-                bmTrieContains.AddResult(TestTrieContains(trie, word));
+                var existsList = false;
+                var existsTrie = false;
 
-            }            
-            // prefix test
-            // pattern test
+                bmListContains.AddResult(TestListContains(lstWords, word, ref existsList));
+                bmTrieContains.AddResult(TestTrieContains(trie, word, ref existsTrie));
+
+                Assert.IsTrue(existsList && existsTrie); // tegridy check
+            }
+            foreach (var pattern in lstPatterns) // pattern test
+            {
+                var numList = 0;
+                var numTrie = 0;
+
+                bmListPattern.AddResult(TestListContainsPattern(lstWords, pattern, ref numList));
+                bmTriePattern.AddResult(TestTrieContainsPattern(trie, pattern, ref numTrie));
+
+                Assert.IsTrue(numList == numTrie); // tegridy check
+            }
+            foreach (var prefix in lstPrefixes) // prefix test
+            {
+                var numList = 0;
+                var numTrie = 0;
+
+                bmListPrefix.AddResult(TestListStartsWith(lstWords, prefix, ref numList));
+                bmTriePrefix.AddResult(TestTrieStartsWith(trie, prefix, ref numTrie));
+
+                Assert.IsTrue(numList == numTrie); // tegridy check
+            }
 
             WriteBenchmarkHeader();
             WriteBenchmarkRow("List Contains", bmListContains);
             WriteBenchmarkRow("Trie Contains", bmTrieContains);
+            WriteBenchmarkFooter();
+            WriteBenchmarkRow("List Pattern", bmListPattern);
+            WriteBenchmarkRow("Trie Find(pattern)", bmTriePattern);
+            WriteBenchmarkFooter();
+            WriteBenchmarkRow("List StartsWith", bmListPrefix);
+            WriteBenchmarkRow("Trie Find(prefix)", bmTriePrefix);
             WriteBenchmarkFooter();
         }
     }
@@ -467,14 +506,49 @@ public class E_BenchMarking
     /// </summary>
     /// <param name="list">The <see cref="List{string}"/> to use</param>
     /// <param name="word">The word to find</param>
+    /// <param name="exists">Result of the function call</param>
     /// <returns>A <see cref="TimeSpan"/></returns>
-    private static TimeSpan TestListContains(List<string> list, string word)
+    private static TimeSpan TestListContains(List<string> list, string word, ref bool exists)
     {
         var start = DateTime.Now;
 
-        _ = list.Contains(word);
+        exists = list.Contains(word);
 
         return DateTime.Now - start; 
+    }
+
+    /// <summary>
+    /// Calls <see cref="Regex.IsMatch(string)"/> on each item in the list and returns the duration of the call.
+    /// </summary>
+    /// <param name="list">The <see cref="List{string}"/> to use</param>
+    /// <param name="pattern">The pattern to match</param>
+    /// <param name="num">Result of the function call</param>
+    /// <returns>A <see cref="TimeSpan"/></returns>
+    private static TimeSpan TestListContainsPattern(List<string> list, IEnumerable<char?> pattern, ref int num)
+    {
+        var start = DateTime.Now;
+        var match = pattern.ToRegex();
+        var lst = list.Where(w => match.IsMatch(w)).ToList();
+
+        num = lst.Count;
+
+        return DateTime.Now - start;
+    }
+
+     /// <summary>
+    /// Calls <see cref="List{string}"/>.Where(w => w.StartsWith(prefix, StringComparison.CurrentCulture)).ToList() and returns the duration of the call.
+    /// </summary>
+    /// <param name="list">The <see cref="List{string}"/> to use</param>
+    /// <param name="prefix">The prefix to match</param>
+    /// <param name="num">Result of the function call</param>
+    /// <returns>A <see cref="TimeSpan"/></returns>
+    private static TimeSpan TestListStartsWith(List<string> list, string prefix, ref int num)
+    {
+        var start = DateTime.Now;
+
+        num = list.Where(w => w.StartsWith(prefix, StringComparison.CurrentCulture)).ToList().Count;
+
+        return DateTime.Now - start;
     }
 
     /// <summary>
@@ -482,21 +556,62 @@ public class E_BenchMarking
     /// </summary>
     /// <param name="trie">The <see cref="Trie"/> to use</param>
     /// <param name="word">The word to find</param>
+    /// <param name="exists">Result of the function call</param>
     /// <returns>A <see cref="TimeSpan"/></returns>
-    private static TimeSpan TestTrieContains(Trie trie, string word)
+    private static TimeSpan TestTrieContains(Trie trie, string word, ref bool exists)
     {
         var start = DateTime.Now;
 
-        _ = trie.Contains(word, false);
+        exists = trie.Contains(word, false);
 
         return DateTime.Now - start;
     }
 
+    /// <summary>
+    /// Calls <see cref="Trie.Find(PatternMatch)"/>.ToList() and returns the duration of the call.
+    /// </summary>
+    /// <param name="trie">The <see cref="Trie"/> to use</param>
+    /// <param name="pattern">The pattern to match</param>
+    /// <param name="num">Result of the function call</param>
+    /// <returns>A <see cref="TimeSpan"/></returns>
+    private static TimeSpan TestTrieContainsPattern(Trie trie, IEnumerable<char?> pattern, ref int num)
+    {
+        var start = DateTime.Now;
+        var match = new PatternMatch(pattern, PatternMatchType.IsFragment);
+        var lst = trie.Find(match).ToList();
+
+        num = lst.Count;
+
+        return DateTime.Now - start;
+    }
+
+    /// <summary>
+    /// Calls <see cref="Trie.Find(string, bool)"/>.ToList() and returns the duration of the call.
+    /// </summary>
+    /// <param name="trie">The <see cref="Trie"/> to use</param>
+    /// <param name="prefix">The prefix to match</param>
+    /// <param name="num">Result of the function call</param>
+    /// <returns>A <see cref="TimeSpan"/></returns>
+    private static TimeSpan TestTrieStartsWith(Trie trie, string prefix, ref int num)
+    {
+        var start = DateTime.Now;
+
+        num = trie.Find(prefix, true).ToList().Count;
+
+        return DateTime.Now - start;
+    }
+
+    /// <summary>
+    /// Outputs result table separator row to debug window.
+    /// </summary>
     private static void WriteBenchmarkFooter()
     {
         Debug.WriteLine(fmtRowBorder);
     }
 
+    /// <summary>
+    /// Outputs result table column headers to debug window.
+    /// </summary>
     private static void WriteBenchmarkHeader()
     {
         Debug.WriteLine(fmtRowBorder);
@@ -504,6 +619,9 @@ public class E_BenchMarking
         Debug.WriteLine(fmtRowBorder);
     }
 
+    /// <summary>
+    /// Outputs result table result row to debug window.
+    /// </summary>
     private static void WriteBenchmarkRow(string testName, BenchMarkResult row)
     {
         Debug.WriteLine(fmtRow, testName, row.NumTests, row.MinDuration, row.MaxDuration, row.AverageDuration, row.MedianDuration);

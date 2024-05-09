@@ -25,6 +25,12 @@ public class PatternMatch : List<CharMatch>
     public PatternMatch(): base(){}
 
     /// <summary>
+    /// Creates a new <see cref="PatternMatch"/> from the given <see cref="IEnumerable{char?}"/>.
+    /// A null char in the collection will yield a wildcard.
+    /// </summary>
+    public PatternMatch(IEnumerable<char?> pattern, PatternMatchType type) : base(pattern.ToCharMatchArray()) { Type = type; }
+
+    /// <summary>
     /// Creates a new <see cref="PatternMatch"/> from the given <see cref="IEnumerable{CharMatch}"/>.
     /// </summary>
     public PatternMatch(IEnumerable<CharMatch> collection, PatternMatchType type) : base(collection) { Type = type; }

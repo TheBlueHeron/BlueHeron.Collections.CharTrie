@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using BlueHeron.Collections.Trie.Search;
 
 namespace BlueHeron.Collections;
@@ -11,6 +12,7 @@ public static class GuidExtensions
 {
     #region Fields
 
+    private const string _DOT = ".";
     private const string _MINUS = "-";
     private static readonly CompositeFormat fmtGuid = CompositeFormat.Parse("{0}-{1}-{2}-{3}-{4}");
 
@@ -29,6 +31,40 @@ public static class GuidExtensions
             return [CharMatch.Wildcard];
         }
         return text.ToCharArray().Select(c => new CharMatch(c));
+    }
+
+    /// <summary>
+    /// Returns this array of characters as an array of <see cref="CharMatch"/> objects.
+    /// </summary>
+    /// <param name="text">This string</param>
+    /// <returns>An <see cref="IEnumerable{CharMatch}"/></returns>
+    [DebuggerStepThrough()]
+    public static IEnumerable<CharMatch> ToCharMatchArray(this IEnumerable<char?> pattern)
+    {
+        if (!pattern.Any())
+        {
+            return [CharMatch.Wildcard];
+        }
+        return pattern.Select(c => new CharMatch(c));
+    }
+
+    /// <summary>
+    /// Returns this array of characters as a <see cref="Regex"/>.
+    /// </summary>
+    /// <param name="text">This string</param>
+    /// <returns>An <see cref="IEnumerable{CharMatch}"/></returns>
+    public static Regex ToRegex(this IEnumerable<char?> pattern)
+    {
+        var input = string.Empty;
+
+        foreach (var item in pattern)
+        {
+            input += item == null ? _DOT : item;
+        }
+
+        var strRegex = ".*" + Regex.Escape(input) + ".*";
+
+        return new Regex(strRegex);
     }
 
     /// <summary>

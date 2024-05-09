@@ -599,18 +599,9 @@ public class Trie
     {
         if (fragment.Count == matchCount)
         {
-            if (node.IsWord) // match
+            foreach (var word in Walk(node, buffer)) // all words are a match
             {
-                yield return buffer.ToString();
-            }
-            foreach (var child in node.Children.Entries)  // all subsequent words are a match
-            {
-                buffer.Append(child.Key);
-                foreach (var word in Walk(child.Value, buffer))
-                {
-                    yield return word;
-                }
-                buffer.Length--;
+                yield return word;
             }
         }
         else
@@ -623,47 +614,31 @@ public class Trie
                     buffer.Append(child.Key);
                     if (charToMatch.IsMatch(child.Key)) // char is a match; try to match any remaining string
                     {
-                        var hasResults = false;
                         foreach (var word in WalkContaining(child.Value, fragment, buffer, matchCount + 1))
                         {
-                            hasResults = true;
                             yield return word;
-                        }
-                        if (!hasResults && matchCount == 0) // start over at child level
-                        {
-                            foreach (var word in WalkContaining(child.Value, fragment, buffer, 0))
-                            {
-                                yield return word;
-                            }
-                            continue; // next node at current depth
                         }
                     }
                     else // if matchCount == 0 look further, else start over at current level
                     {
-                        Node nextNode;
                         if (matchCount == 0)
                         {
-                            nextNode = child.Value;
+                            foreach (var word in WalkContaining(child.Value, fragment, buffer, matchCount))
+                            {
+                                yield return word;
+                            }
                         }
                         else
                         {
-                            nextNode = node;
-                            matchCount--;
                             buffer.Length--;
-                        }
-                        foreach (var word in WalkContaining(nextNode, fragment, buffer, matchCount))
-                        {
-                            yield return word;
-                        }
-                        if (matchCount > 0)
-                        {
-                            break;
+                            foreach (var word in WalkContaining(node, fragment, buffer, matchCount - 1))
+                            {
+                                yield return word;
+                            }
+                            continue;
                         }
                     }
-                    if (buffer.Length > 0)
-                    {
-                        buffer.Length--;
-                    }
+                    buffer.Length--;
                 }
             }
         }
@@ -729,16 +704,9 @@ public class Trie
     {
         if (fragment.Count == matchCount)
         {
-            if (node.IsWord) // match
+            foreach (var value in Walk(node)) // all words are a match
             {
-                yield return node.Value;
-            }
-            foreach (var child in node.Children.Entries)  // all subsequent words are a match
-            {
-                foreach (var value in Walk(child.Value))
-                {
-                    yield return value;
-                }
+                yield return value;
             }
         }
         else
@@ -750,40 +718,26 @@ public class Trie
                 {
                     if (charToMatch.IsMatch(child.Key)) // char is a match; try to match any remaining string
                     {
-                        var hasResults = false;
                         foreach (var value in WalkValuesContaining(child.Value, fragment, matchCount + 1))
                         {
-                            hasResults = true;
-                            yield return value;
-                        }
-                        if (!hasResults && matchCount == 0) // start over at child level
-                        {
-                            foreach (var value in WalkValuesContaining(child.Value, fragment, 0))
-                            {
-                                yield return value;
-                            }
+                           yield return value;
                         }
                     }
                     else // if matchCount == 0 look further, else start over at current level
                     {
-                        Node nextNode;
-
                         if (matchCount == 0)
                         {
-                            nextNode = child.Value;
+                            foreach (var value in WalkValuesContaining(child.Value, fragment, matchCount))
+                            {
+                                yield return value;
+                            }
                         }
                         else
                         {
-                            matchCount--;
-                            nextNode = node;
-                        }
-                        foreach (var value in WalkValuesContaining(nextNode, fragment, matchCount))
-                        {
-                            yield return value;
-                        }
-                        if (matchCount > 0) // no need to look further
-                        {
-                            break;
+                            foreach (var value in WalkValuesContaining(node, fragment, matchCount - 1))
+                            {
+                                yield return value;
+                            }
                         }
                     }
                 }

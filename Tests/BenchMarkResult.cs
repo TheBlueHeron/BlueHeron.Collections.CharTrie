@@ -5,7 +5,7 @@ namespace BlueHeron.Collections.Trie.Tests;
 /// Container for details on the duration of a test.
 /// Values are calculated in microseconds.
 /// </summary>
-internal class BenchMarkResult
+internal sealed class BenchMarkResult
 {
     /// <summary>
     /// The average duration of the test.
