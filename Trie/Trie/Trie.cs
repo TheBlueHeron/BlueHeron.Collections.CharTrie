@@ -216,7 +216,7 @@ public class Trie
     public IEnumerable<object?> FindValues(PatternMatch pattern)
     {
         foreach (var word in pattern.Type == PatternMatchType.IsFragment ?
-            WalkValuesContaining(Root, pattern) :
+            WalkValuesContaining(Root, pattern, new StringBuilder()) :
             WalkValues(Root, pattern, new StringBuilder(), 0))            
         {
             yield return word;
@@ -595,52 +595,24 @@ public class Trie
     /// <param name="fragment">The <see cref="PatternMatch"/> to match</param>
     /// <param name="matchCount">Signifies how many characters have already been matched (i.e. how to proceed)</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
-    private static IEnumerable<string> WalkContaining(Node node, PatternMatch fragment, StringBuilder buffer, int matchCount = 0)
+    private static IEnumerable<string> WalkContaining(Node node, PatternMatch fragment, StringBuilder buffer)
     {
-        if (fragment.Count == matchCount)
+        var charToMatch = fragment[0];
+        foreach (var child in node.Children.Entries)
         {
-            foreach (var word in Walk(node, buffer)) // all words are a match
+            buffer.Append(child.Key);
+            if (charToMatch.IsMatch(child.Key) && node.RemainingDepth >= fragment.Count) // char is a match; try to match remaining strings to remaining pattern if possible
+            {
+                foreach (var word in Walk(child.Value, new PatternMatch(fragment.Skip(1), fragment.Type), buffer, 0))
+                {
+                    yield return word;
+                }                
+            }
+            foreach (var word in WalkContaining(child.Value, fragment, buffer)) // look further
             {
                 yield return word;
             }
-        }
-        else
-        {
-            if (fragment.Count <= matchCount + node.RemainingDepth) // enough places left for a possible match
-            {
-                var charToMatch = fragment[matchCount];
-                foreach (var child in node.Children.Entries)
-                {
-                    buffer.Append(child.Key);
-                    if (charToMatch.IsMatch(child.Key)) // char is a match; try to match any remaining string
-                    {
-                        foreach (var word in WalkContaining(child.Value, fragment, buffer, matchCount + 1))
-                        {
-                            yield return word;
-                        }
-                    }
-                    else // if matchCount == 0 look further, else start over at current level
-                    {
-                        if (matchCount == 0)
-                        {
-                            foreach (var word in WalkContaining(child.Value, fragment, buffer, matchCount))
-                            {
-                                yield return word;
-                            }
-                        }
-                        else
-                        {
-                            buffer.Length--;
-                            foreach (var word in WalkContaining(node, fragment, buffer, matchCount - 1))
-                            {
-                                yield return word;
-                            }
-                            continue;
-                        }
-                    }
-                    buffer.Length--;
-                }
-            }
+            buffer.Length--;
         }
     }
 
@@ -698,50 +670,24 @@ public class Trie
     /// </summary>
     /// <param name="node">The node to start from</param>
     /// <param name="fragment">The <see cref="PatternMatch"/> to match</param>
-    /// <param name="matchCount">Signifies how many characters have already been matched (i.e. how to proceed)</param>
-    /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
-    private static IEnumerable<object?> WalkValuesContaining(Node node, PatternMatch fragment, int matchCount = 0)
+    private static IEnumerable<object?> WalkValuesContaining(Node node, PatternMatch fragment, StringBuilder buffer)
     {
-        if (fragment.Count == matchCount)
+        var charToMatch = fragment[0];
+        foreach (var child in node.Children.Entries)
         {
-            foreach (var value in Walk(node)) // all words are a match
+            buffer.Append(child.Key);
+            if (charToMatch.IsMatch(child.Key) && node.RemainingDepth >= fragment.Count) // char is a match; try to match remaining strings to remaining pattern if possible
+            {
+                foreach (var word in Walk(child.Value, new PatternMatch(fragment.Skip(1), fragment.Type), buffer, 0))
+                {
+                    yield return word;
+                }
+            }
+            foreach (var value in WalkValuesContaining(child.Value, fragment, buffer)) // look further
             {
                 yield return value;
             }
-        }
-        else
-        {
-            if (fragment.Count <= matchCount + node.RemainingDepth)
-            {
-                var charToMatch = fragment[matchCount];
-                foreach (var child in node.Children.Entries)
-                {
-                    if (charToMatch.IsMatch(child.Key)) // char is a match; try to match any remaining string
-                    {
-                        foreach (var value in WalkValuesContaining(child.Value, fragment, matchCount + 1))
-                        {
-                           yield return value;
-                        }
-                    }
-                    else // if matchCount == 0 look further, else start over at current level
-                    {
-                        if (matchCount == 0)
-                        {
-                            foreach (var value in WalkValuesContaining(child.Value, fragment, matchCount))
-                            {
-                                yield return value;
-                            }
-                        }
-                        else
-                        {
-                            foreach (var value in WalkValuesContaining(node, fragment, matchCount - 1))
-                            {
-                                yield return value;
-                            }
-                        }
-                    }
-                }
-            }
+            buffer.Length--;
         }
     }
 
