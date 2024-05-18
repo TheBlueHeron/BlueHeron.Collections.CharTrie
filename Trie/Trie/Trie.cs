@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
@@ -13,7 +14,8 @@ namespace BlueHeron.Collections.Trie;
 /// </summary>
 /// <typeparam name="TNode">The type of the nodes</typeparam>
 [JsonConverter(typeof(TrieConverter))]
-public class Trie
+[SuppressMessage("Performance", "CA1710:Rename to end with Collection or Dictionary", Justification = "A fitting name already exists.")]
+public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
 {
     #region Objects and variables
 
@@ -658,6 +660,10 @@ public class Trie
             }
         }
     }
+
+    public IEnumerator<KeyValuePair<char, Node>> GetEnumerator() => AsEnumerable().GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => AsEnumerable().GetEnumerator();
 
     #endregion
 }

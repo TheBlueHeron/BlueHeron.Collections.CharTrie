@@ -411,9 +411,12 @@ public class E_BenchMarking
 {
     #region Constants
 
-    private const string fmtHeader = "|            Operation | # Runs | Minimum (탎ec.) | Maximum (탎ec.) | Average (탎ec.) | Median (탎ec.) |";
-    private const string fmtRowBorder = "|----------------------|--------|-----------------|-----------------|-----------------|----------------|";
-    private const string fmtRow = "| {0,20:###} | {1,6:###} | {2,15:##0.0} | {3,15:##0.0} | {4,15:##0.0} | {5,14:##0.0} |";
+    private const string fmtMemoryHeader = "| Object |       Size |";
+    private const string fmtMemoryRowBorder = "|--------|------------|";
+    private const string fmtMemoryRow = "| {0,6:###} | {1,9:###} B |";
+    private const string fmtSpeedHeader = "|            Operation | # Runs | Minimum (탎ec.) | Maximum (탎ec.) | Average (탎ec.) | Median (탎ec.) |";
+    private const string fmtSpeedRowBorder = "|----------------------|--------|-----------------|-----------------|-----------------|----------------|";
+    private const string fmtSpeedRow = "| {0,20:###} | {1,6:###} | {2,15:##0.0} | {3,15:##0.0} | {4,15:##0.0} | {5,14:##0.0} |";
 
     #endregion
 
@@ -450,6 +453,15 @@ public class E_BenchMarking
                     lstWords.Add(line);
                 }
             }
+
+            // output memory benchmark results
+            WriteMemoryBenchmarkHeader();
+            WriteMemoryBenchmarkRow("List", lstWords);
+            WriteMemoryBenchmarkBorder();
+            WriteMemoryBenchmarkRow("Trie", trie);
+            WriteMemoryBenchmarkBorder();
+            Debug.WriteLine(string.Empty);
+
             for (var i = 10; i < lstWords.Count; i += 1000) // create test list (~ 375 words)
             {
                 lstTestWords.Add(lstWords[i]);
@@ -488,16 +500,17 @@ public class E_BenchMarking
                 Assert.IsTrue(numList == numTrie); // tegridy check
             }
 
-            WriteBenchmarkHeader();
-            WriteBenchmarkRow("List Contains", bmListContains);
-            WriteBenchmarkRow("Trie Contains", bmTrieContains);
-            WriteBenchmarkFooter();
-            WriteBenchmarkRow("List Pattern", bmListPattern);
-            WriteBenchmarkRow("Trie Find(pattern)", bmTriePattern);
-            WriteBenchmarkFooter();
-            WriteBenchmarkRow("List StartsWith", bmListPrefix);
-            WriteBenchmarkRow("Trie Find(prefix)", bmTriePrefix);
-            WriteBenchmarkFooter();
+            // output speed benchmark results
+            WriteSpeedBenchmarkHeader();
+            WriteSpeedBenchmarkRow("List Contains", bmListContains);
+            WriteSpeedBenchmarkRow("Trie Contains", bmTrieContains);
+            WriteSpeedBenchmarkBorder();
+            WriteSpeedBenchmarkRow("List Pattern", bmListPattern);
+            WriteSpeedBenchmarkRow("Trie Find(pattern)", bmTriePattern);
+            WriteSpeedBenchmarkBorder();
+            WriteSpeedBenchmarkRow("List StartsWith", bmListPrefix);
+            WriteSpeedBenchmarkRow("Trie Find(prefix)", bmTriePrefix);
+            WriteSpeedBenchmarkBorder();
         }
     }
 
@@ -604,26 +617,52 @@ public class E_BenchMarking
     /// <summary>
     /// Outputs result table separator row to debug window.
     /// </summary>
-    private static void WriteBenchmarkFooter()
+    private static void WriteMemoryBenchmarkBorder()
     {
-        Debug.WriteLine(fmtRowBorder);
+        Debug.WriteLine(fmtMemoryRowBorder);
     }
 
     /// <summary>
     /// Outputs result table column headers to debug window.
     /// </summary>
-    private static void WriteBenchmarkHeader()
+    private static void WriteMemoryBenchmarkHeader()
     {
-        Debug.WriteLine(fmtRowBorder);
-        Debug.WriteLine(fmtHeader);
-        Debug.WriteLine(fmtRowBorder);
+        Debug.WriteLine(fmtMemoryRowBorder);
+        Debug.WriteLine(fmtMemoryHeader);
+        Debug.WriteLine(fmtMemoryRowBorder);
     }
 
     /// <summary>
     /// Outputs result table result row to debug window.
     /// </summary>
-    private static void WriteBenchmarkRow(string testName, BenchMarkResult row)
+    private static void WriteMemoryBenchmarkRow<T>(string objectName, T obj)
     {
-        Debug.WriteLine(fmtRow, testName, row.NumTests, row.MinDuration, row.MaxDuration, row.AverageDuration, row.MedianDuration);
+        Debug.WriteLine(fmtMemoryRow, objectName, SizeOf<T>.Get(obj));
+    }
+
+    /// <summary>
+    /// Outputs result table separator row to debug window.
+    /// </summary>
+    private static void WriteSpeedBenchmarkBorder()
+    {
+        Debug.WriteLine(fmtSpeedRowBorder);
+    }
+
+    /// <summary>
+    /// Outputs result table column headers to debug window.
+    /// </summary>
+    private static void WriteSpeedBenchmarkHeader()
+    {
+        Debug.WriteLine(fmtSpeedRowBorder);
+        Debug.WriteLine(fmtSpeedHeader);
+        Debug.WriteLine(fmtSpeedRowBorder);
+    }
+
+    /// <summary>
+    /// Outputs result table result row to debug window.
+    /// </summary>
+    private static void WriteSpeedBenchmarkRow(string testName, BenchMarkResult row)
+    {
+        Debug.WriteLine(fmtSpeedRow, testName, row.NumTests, row.MinDuration, row.MaxDuration, row.AverageDuration, row.MedianDuration);
     }
 }
