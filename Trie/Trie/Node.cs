@@ -1,22 +1,18 @@
 ﻿using System.Text.Json.Serialization;
 using BlueHeron.Collections.Trie.Serialization;
-using Faster.Map.DenseMap;
 
 namespace BlueHeron.Collections.Trie;
 
 /// <summary>
 /// A node in the <see cref="Trie"/>, which represents a character.
 /// </summary>
-[JsonConverter(typeof(NodeConverter))]
+[JsonConverter(typeof(NodeSerializer))]
 public class Node
 {
     #region Objects and variables
 
-    private int mNumChildren;
-    private int mNumWords;
     private int mRemainingDepth;
-    private readonly DenseMap<char, Node> mChildren;
-    private static readonly EqualityComparer<char> mComparer = EqualityComparer<char>.Default;
+    private readonly HashSet<(char, Node)> mChildren;
 
     #endregion
 
@@ -27,17 +23,8 @@ public class Node
     /// </summary>
     internal Node(bool isDeserialized)
     {
-        mChildren = new DenseMap<char, Node>(8, 0.5, mComparer);
-        if (isDeserialized)
-        {
-            mNumChildren = 0;
-            mNumWords = 0;
-            mRemainingDepth = 0;
-        }
-        else
-        {
-            Unset();
-        }
+        mChildren = [];
+        mRemainingDepth = isDeserialized ? 0 : -1;
     }
 
     /// <summary>
@@ -52,50 +39,18 @@ public class Node
     /// <summary>
     /// Gets the collection of <see cref="Node"/>s that immediately follow this <see cref="Node"/>.
     /// </summary>
-    public IReadOnlyDictionary<char, Node> Nodes => mChildren.Entries.ToDictionary();
+    public IReadOnlyDictionary<char, Node> Nodes => mChildren.ToDictionary();
 
     /// <summary>
-    /// Gets the internally used <see cref="DenseMap{char, Node}"/>.
+    /// Gets the internally used <see cref="HashSet{Tuple{char, Node}}"/>.
     /// </summary>
-    internal DenseMap<char, Node> Children => mChildren;
+    internal HashSet<(char, Node)> Children => mChildren;
 
     /// <summary>
     /// Gets a boolean, determining whether this <see cref="Node"/> finishes a word.
     /// </summary>
     /// <remarks>If a node is a word, it may still have children that form other words.</remarks>
     public bool IsWord { get; internal set; }
-
-    /// <summary>
-    /// Gets the number of child nodes of this <see cref="Node"/>.
-    /// </summary>
-    public int NumChildren
-    {
-        get
-        {
-            if (mNumChildren < 0)
-            {
-                mNumChildren = mChildren.Count;
-            }
-            return mNumChildren;
-        }
-        internal set => mNumChildren = value;
-    }
-
-    /// <summary>
-    /// Gets the number of words of which this <see cref="Node"/> is a part.
-    /// </summary>
-    public int NumWords
-    {
-        get
-        {
-            if (mNumWords < 0)
-            {
-                mNumWords = (IsWord ? 1 : 0) + (mChildren.Count == 0 ? 0 : Nodes.Sum(c => c.Value.NumWords));
-            }
-            return mNumWords;
-        }
-        internal set => mNumWords = value;
-    }
 
     /// <summary>
     /// Gets the maximum depth of the remaining hierarchy of nodes.
@@ -132,14 +87,9 @@ public class Node
     /// </summary>
     /// <param name="character">The <see cref="char"/> to match</param>
     /// <returns>The <see cref="Node"/> representing the given <see cref="char"/> if it exists; else <see langword="null"/></returns>
-    public Node GetNode(char character)
+    public Node? GetNode(char character)
     {
-        Node? node;
-        if (mChildren.Get(character, out node))
-        {
-            return node;
-        }
-        throw new ArgumentOutOfRangeException(nameof(character));
+        return mChildren.FirstOrDefault(kv => kv.Item1 == character).Item2;
     }
 
     /// <summary>
@@ -147,7 +97,7 @@ public class Node
     /// </summary>
     /// <param name="character">The <see cref="string"/> prefix to match</param>
     /// <returns>The <see cref="Node"/> representing the given <see cref="string"/> if it exists; else <see langword="null"/></returns>
-    public Node GetNode(string prefix)
+    public Node? GetNode(string prefix)
     {
         var node = this;
         foreach (var prefixChar in prefix)
@@ -155,11 +105,16 @@ public class Node
             node = node.GetNode(prefixChar);
             if (node == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(prefix));
+                break;
             }
         }
         return node;
     }
+
+    /// <summary>
+    /// Returns the number of words represented by this <see cref="Node"/> and its children.
+    /// </summary>
+    public int NumWords() => (IsWord ? 1 : 0) + mChildren.Sum(kv => kv.Item2.NumWords());
 
     #endregion
 
@@ -170,10 +125,42 @@ public class Node
     /// </summary>
     internal void Unset()
     {
-        mNumChildren = -1;
-        mNumWords = -1;
         mRemainingDepth = -1;
     }
+
+    #endregion
+}
+
+/// <summary>
+/// A <see cref="Node"/> that has a field that represents the expected number of child <see cref="Node"/>s.
+/// </summary>
+[JsonConverter(typeof(NodeDeserializer))]
+public sealed class DeserializedNode: Node
+{
+    private int? mNumChildren;
+
+    /// <summary>
+    /// The expected number of <see cref="Node"/>s in the <see cref="Node.Children"/> collection.
+    /// </summary>
+    public int NumChildren
+    {
+        get
+        {
+            if (!mNumChildren.HasValue)
+            {
+                mNumChildren = Children.Count;
+            }
+            return mNumChildren.Value;
+        }
+        internal set => mNumChildren = value;
+    }
+
+    #region Construction
+
+    /// <summary>
+    /// Creates a new <see cref="DeserializedNode"/>.
+    /// </summary>
+    public DeserializedNode() : base(true) { }
 
     #endregion
 }

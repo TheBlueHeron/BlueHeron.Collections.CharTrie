@@ -35,11 +35,11 @@ public sealed class TrieConverter : JsonConverter<Trie>
                     if (reader.GetString() is string key)
                     {
                         var c = key[0];
-                        Node? node;
+                        DeserializedNode? node;
 
                         reader.Read(); // -> StartObject ( = node)
                         using var doc = JsonDocument.ParseValue(ref reader);
-                        node = JsonSerializer.Deserialize<Node>(doc.RootElement, options);
+                        node = JsonSerializer.Deserialize<DeserializedNode>(doc.RootElement, options);
                         if (node != null)
                         {
                             if (parentNode == null) // current node is root node
@@ -48,14 +48,24 @@ public sealed class TrieConverter : JsonConverter<Trie>
                                 {
                                     ParseNode(ref reader, node, options);
                                 }
-                                return node; // end point of recursion
+                                var root = new Node() { IsWord = node.IsWord, RemainingDepth = node.RemainingDepth, TypeIndex = node.TypeIndex, Value = node.Value };  // loose NumChildren field
+
+                                foreach (var item in node.Children)
+                                {
+                                    root.Children.Add(item);
+                                }
+
+                                return root; // end point of recursion
                             }
                             else // current node is child of parent node
                             {
-                                parentNode.Children.Emplace(c, node);
+                                var child = new Node { IsWord = node.IsWord, RemainingDepth = node.RemainingDepth, TypeIndex = node.TypeIndex, Value = node.Value };  // loose NumChildren field
+
+                                parentNode.Children.Add((c, child));
                                 while (node.NumChildren > node.Children.Count) // next node is child of current node
                                 {
-                                    ParseNode(ref reader, node, options);
+                                    ParseNode(ref reader, child, options);
+                                    node.NumChildren--;
                                 }
                                 return null; // back up the tree
                             }
@@ -143,8 +153,8 @@ public sealed class TrieConverter : JsonConverter<Trie>
         foreach (var item in value.AsEnumerable()) // serialize Trie nodes as an array of nodes
         {
             writer.WriteStartObject();
-            writer.WritePropertyName($"{item.Key}");
-            writer.WriteRawValue(JsonSerializer.Serialize(item.Value));
+            writer.WritePropertyName($"{item.Item1}");
+            writer.WriteRawValue(JsonSerializer.Serialize(item.Item2));
             writer.WriteEndObject();
         }
         writer.WriteEndArray();

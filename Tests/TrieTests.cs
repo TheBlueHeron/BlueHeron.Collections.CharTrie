@@ -11,24 +11,16 @@ public class A_TrieTests
     [TestMethod]
     public void CreateAndValidate()
     {
-        var numWords = 0; // should be set to 2
-        var woordeIsWord = true; // should be set to false
         var trie = Create();
-        var totalWords = trie.NumWords;
-        var blExistsWoo = trie.Contains("woo", true);
+
+        Assert.IsTrue(trie.Contains("woo", true));
 
         var node = trie.GetNode("woord");
-        if (node != null)
-        {
-            numWords = node.NumWords;
-        }
+        Assert.IsTrue(node != null && node.IsWord == true);
         node = trie.GetNode("woorde");
-        if (node != null)
-        {
-            woordeIsWord = node.IsWord;
-        }
+        Assert.IsTrue(node != null && node.IsWord == false);
 
-        Assert.IsTrue(totalWords == 6 && blExistsWoo && numWords == 2 && !woordeIsWord);
+
     }
 
     [TestMethod]
@@ -37,9 +29,9 @@ public class A_TrieTests
         var trie = Create();
 
         trie.Remove("woo", true);
-        Assert.IsTrue(trie.NumWords == 4);
+        Assert.IsTrue(trie.Where(kv => kv.Item2.IsWord).Count() == 4); // two words must have been removed
         trie.Remove("wapens", false);
-        Assert.IsTrue(trie.NumWords == 3);
+        Assert.IsTrue(trie.Where(kv => kv.Item2.IsWord).Count() == 3); // one word must have been been removed
     }
 
     [TestMethod]
@@ -74,7 +66,7 @@ public class A_TrieTests
 
         Assert.IsTrue(!string.IsNullOrEmpty(json));
         var reconstituted = JsonSerializer.Deserialize<Trie>(json);
-        Assert.IsTrue(reconstituted != null && reconstituted.NumWords == trie.NumWords);
+        Assert.IsTrue(reconstituted != null && reconstituted.NumWords() == trie.NumWords());
         Assert.IsTrue(reconstituted.Find("w", true).ToList().Count == 3);
     }
 
@@ -83,7 +75,7 @@ public class A_TrieTests
     {
         var trie = await Trie.ImportAsync(new FileInfo("dictionaries\\nl.dic"));
 
-        Assert.IsTrue(trie != null && trie.NumWords == 374622);
+        Assert.IsTrue(trie != null && trie.NumWords() == 374622);
         
         Assert.IsTrue(await trie.ExportAsync("dictionaries\\nl.json"));
     }
@@ -93,7 +85,7 @@ public class A_TrieTests
     {
         var trie = await Trie.LoadAsync(new FileInfo("dictionaries\\nl.json"));
 
-        Assert.IsTrue(trie != null && trie.NumWords == 374622);
+        Assert.IsTrue(trie != null && trie.NumWords() == 374622);
     }
 
     /// <summary>
@@ -102,14 +94,15 @@ public class A_TrieTests
     /// <returns>A <see cref="Trie"/></returns>
     public static Trie Create()
     {
-        var tree = new Trie();
-
-        tree.Add("woord");
-        tree.Add("woorden");
-        tree.Add("zijn");
-        tree.Add("wapens");
-        tree.Add("logos");
-        tree.Add("lustoord");
+        var tree = new Trie
+        {
+            "woord",
+            "woorden",
+            "zijn",
+            "wapens",
+            "logos",
+            "lustoord"
+        };
 
         return tree;
     }
@@ -121,10 +114,9 @@ public class B_TrieMapTests
     [TestMethod]
     public void CreateAndValidate()
     {
-        var trie = Create();
-        var totalWords = trie.NumWords;        
+        var trie = Create();  
 
-        Assert.IsTrue(totalWords == 6);
+        Assert.IsTrue(trie.NumWords() == 6);
     }
 
     [TestMethod]
@@ -169,7 +161,7 @@ public class B_TrieMapTests
 
         Assert.IsTrue(!string.IsNullOrEmpty(json));
         var reconstituted = JsonSerializer.Deserialize<Trie>(json);
-        Assert.IsTrue(reconstituted != null && reconstituted.NumWords == trie.NumWords);
+        Assert.IsTrue(reconstituted != null && reconstituted.NumWords() == trie.NumWords());
         Assert.IsTrue(reconstituted.Find("w", true).ToList().Count == 3);
         
         var node = trie.GetNode("logos");
@@ -186,14 +178,15 @@ public class B_TrieMapTests
     /// <returns>A <see cref="TrieMap{Int32}"/></returns>
     public static Trie Create()
     {
-        var tree = new Trie();
-
-        tree.Add("woord", 1); // typeindex -> 0
-        tree.Add("woorden", 2.14); // typeindex -> 1
-        tree.Add("zijn", 3.0f); // typeindex -> 2
-        tree.Add("wapens", DateTime.Now); // typeindex -> 3
-        tree.Add("logos", new {PropertyA = true, PropertyB = 3.1415 }); // typeindex -> 4
-        tree.Add("lustoord", 7); // typeindex -> 0
+        var tree = new Trie
+        {
+            { "woord", 1 }, // typeindex -> 0
+            { "woorden", 2.14 }, // typeindex -> 1
+            { "zijn", 3.0f }, // typeindex -> 2
+            { "wapens", DateTime.Now }, // typeindex -> 3
+            { "logos", new { PropertyA = true, PropertyB = 3.1415 } }, // typeindex -> 4
+            { "lustoord", 7 } // typeindex -> 0
+        };
 
         return tree;
     }
@@ -411,9 +404,9 @@ public class E_BenchMarking
 {
     #region Constants
 
-    private const string fmtMemoryHeader = "| Object |       Size |";
-    private const string fmtMemoryRowBorder = "|--------|------------|";
-    private const string fmtMemoryRow = "| {0,6:###} | {1,9:###} B |";
+    private const string fmtMemoryHeader = "| Object |         Size |";
+    private const string fmtMemoryRowBorder = "|--------|--------------|";
+    private const string fmtMemoryRow = "| {0,6:###} | {1,10:###} B |";
     private const string fmtSpeedHeader = "|            Operation | # Runs | Minimum (탎ec.) | Maximum (탎ec.) | Average (탎ec.) | Median (탎ec.) |";
     private const string fmtSpeedRowBorder = "|----------------------|--------|-----------------|-----------------|-----------------|----------------|";
     private const string fmtSpeedRow = "| {0,20:###} | {1,6:###} | {2,15:##0.0} | {3,15:##0.0} | {4,15:##0.0} | {5,14:##0.0} |";
@@ -438,11 +431,17 @@ public class E_BenchMarking
         Assert.IsTrue(File.Exists("dictionaries\\nl.json"));
         Assert.IsTrue(File.Exists("dictionaries\\nl.dic"));
 
+        GC.GetTotalMemory(true);
+        var startMemory = GC.GetTotalAllocatedBytes(true);
         var trie = await Trie.LoadAsync(new FileInfo("dictionaries\\nl.json")); // create trie from export created earlier
-        
+        var trieMem = GC.GetTotalAllocatedBytes(true) - startMemory;
+
         if (trie != null)
         {
-            var reader = new FileInfo("dictionaries\\nl.dic").OpenText(); // load list of words
+            GC.GetTotalMemory(true);
+            startMemory = GC.GetTotalAllocatedBytes(true);
+
+            using var reader = new FileInfo("dictionaries\\nl.dic").OpenText(); // load list of words
             string? line;
 
             while (!reader.EndOfStream)
@@ -453,12 +452,13 @@ public class E_BenchMarking
                     lstWords.Add(line);
                 }
             }
+            var listMem = GC.GetTotalAllocatedBytes(true) - startMemory;
 
             // output memory benchmark results
             WriteMemoryBenchmarkHeader();
-            WriteMemoryBenchmarkRow("List", lstWords);
+            WriteMemoryBenchmarkRow("List", listMem);
             WriteMemoryBenchmarkBorder();
-            WriteMemoryBenchmarkRow("Trie", trie);
+            WriteMemoryBenchmarkRow("Trie", trieMem);
             WriteMemoryBenchmarkBorder();
             Debug.WriteLine(string.Empty);
 
@@ -635,9 +635,11 @@ public class E_BenchMarking
     /// <summary>
     /// Outputs result table result row to debug window.
     /// </summary>
-    private static void WriteMemoryBenchmarkRow<T>(string objectName, T obj)
+    /// <param name="objectName">The name of the object</param>
+    /// <param name="memUsage">The memory usage in bytes</param>
+    private static void WriteMemoryBenchmarkRow(string objectName, long memUsage)
     {
-        Debug.WriteLine(fmtMemoryRow, objectName, SizeOf<T>.Get(obj));
+        Debug.WriteLine(fmtMemoryRow, objectName, memUsage);
     }
 
     /// <summary>

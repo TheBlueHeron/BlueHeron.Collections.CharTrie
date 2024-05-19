@@ -7,12 +7,11 @@ namespace BlueHeron.Collections.Trie.Serialization;
 /// A <see cref="JsonConverter{Node}"/> that minimizes output.
 /// </summary>
 /// <typeparam name="TNode">The type of the <see cref="Node"/></typeparam>
-public class NodeConverter : JsonConverter<Node>
+public class NodeDeserializer : JsonConverter<DeserializedNode>
 {
     #region Fields
 
     private const string _C = "c"; // NumChildren
-    private const string _N = "n"; // NumWords
     private const string _R = "r"; // RemainingDepth
     private const string _T = "t"; // TypeIndex
     private const string _V = "v"; // Value
@@ -28,7 +27,7 @@ public class NodeConverter : JsonConverter<Node>
     /// <param name="reader">The <see cref="Utf8JsonReader"/> containing the data</param>
     /// <param name="node">The <see cref="Node"/>, whose value to deserialize</param>
     /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
-    protected static void ReadValue(ref Utf8JsonReader reader, Node node, JsonSerializerOptions options)
+    protected static void ReadValue(ref Utf8JsonReader reader, DeserializedNode node, JsonSerializerOptions options)
     {
         if (node.TypeIndex >= 0)
         {
@@ -113,30 +112,14 @@ public class NodeConverter : JsonConverter<Node>
         }
     }
 
-    /// <summary>
-    /// Writes the <see cref="Node.Value"/>.
-    /// </summary>
-    /// <param name="writer">The <see cref="Utf8JsonWriter"/> to write to</param>
-    /// <param name="node">The <see cref="Node"/> whose value to serialize</param>
-    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
-    protected static void WriteValue(Utf8JsonWriter writer, Node node, JsonSerializerOptions options)
-    {
-        if (node.Value != null)
-        {
-            writer.WriteNumber(_T, node.TypeIndex);
-            writer.WritePropertyName(_V);
-            writer.WriteRawValue(JsonSerializer.Serialize(node.Value, options));
-        }
-    }
-
     #endregion
 
     #region Overrides
 
     /// <inheritdoc/>
-    public override Node? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override DeserializedNode? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var node = new Node(true);
+        var node = new DeserializedNode();
 
         while (reader.Read())
         {
@@ -149,10 +132,6 @@ public class NodeConverter : JsonConverter<Node>
                         case _C:
                             reader.Read();
                             node.NumChildren = reader.GetInt32();
-                            break;
-                        case _N:
-                            reader.Read();
-                            node.NumWords = reader.GetInt32();
                             break;
                         case _R:
                             reader.Read();
@@ -180,6 +159,59 @@ public class NodeConverter : JsonConverter<Node>
     }
 
     /// <inheritdoc/>
+    public override void Write(Utf8JsonWriter writer, DeserializedNode value, JsonSerializerOptions options)
+    {
+        throw new NotImplementedException();
+    }
+
+    #endregion
+}
+
+/// <summary>
+/// A <see cref="JsonConverter{Node}"/> that minimizes output.
+/// </summary>
+/// <typeparam name="TNode">The type of the <see cref="Node"/></typeparam>
+public class NodeSerializer : JsonConverter<Node>
+{
+    #region Fields
+
+    private const string _C = "c"; // NumChildren
+    private const string _R = "r"; // RemainingDepth
+    private const string _T = "t"; // TypeIndex
+    private const string _V = "v"; // Value
+    private const string _W = "w"; // IsWord
+
+    #endregion
+
+    #region Private methods and functions
+
+    /// <summary>
+    /// Writes the <see cref="Node.Value"/>.
+    /// </summary>
+    /// <param name="writer">The <see cref="Utf8JsonWriter"/> to write to</param>
+    /// <param name="node">The <see cref="Node"/> whose value to serialize</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
+    protected static void WriteValue(Utf8JsonWriter writer, Node node, JsonSerializerOptions options)
+    {
+        if (node.Value != null)
+        {
+            writer.WriteNumber(_T, node.TypeIndex);
+            writer.WritePropertyName(_V);
+            writer.WriteRawValue(JsonSerializer.Serialize(node.Value, options));
+        }
+    }
+
+    #endregion
+
+    #region Overrides
+
+    /// <inheritdoc/>
+    public override Node? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, Node value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
@@ -187,13 +219,9 @@ public class NodeConverter : JsonConverter<Node>
         {
             writer.WriteNumber(_W, 1);
         }
-        if (value.NumChildren > 0)
+        if (value.Children.Count > 0)
         {
-            writer.WriteNumber(_C, value.NumChildren);
-        }
-        if (value.NumWords > 0)
-        {
-            writer.WriteNumber(_N, value.NumWords);
+            writer.WriteNumber(_C, value.Children.Count);
         }
         if (value.RemainingDepth > 0)
         {

@@ -15,7 +15,7 @@ namespace BlueHeron.Collections.Trie;
 /// <typeparam name="TNode">The type of the nodes</typeparam>
 [JsonConverter(typeof(TrieConverter))]
 [SuppressMessage("Performance", "CA1710:Rename to end with Collection or Dictionary", Justification = "A fitting name already exists.")]
-public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
+public class Trie : IEnumerable, IEnumerable<(char, Node)>
 {
     #region Objects and variables
 
@@ -30,11 +30,6 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
     #endregion
 
     #region Properties
-
-    /// <summary>
-    /// Returns the total number of words in this <see cref="Trie"/>.
-    /// </summary>
-    public int NumWords => RootNode.NumWords;
 
     /// <summary>
     /// The root <see cref="Node"/>.
@@ -57,7 +52,7 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
     internal Node RootNode { get; set; } = new Node();
 
     /// <summary>
-    /// Provides access to the list of registered types for the <see cref="NodeConverter"/> that needs it when deserializing nodes.
+    /// Provides access to the list of registered types for the <see cref="NodeSerializer"/> that needs it when deserializing nodes.
     /// </summary>
     internal static List<string> Types => mRegisteredTypes;
 
@@ -103,9 +98,9 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
     /// Walks depth-first through the tree and returns every <see cref="Node"/> that is encountered, accompanied with its key.
     /// </summary>
     /// <returns>An <see cref="IEnumerable{KeyValuePair{char, Node}}"/></returns>
-    public IEnumerable<KeyValuePair<char, Node>> AsEnumerable()
+    public IEnumerable<(char, Node)> AsEnumerable()
     {
-        return Walk(new KeyValuePair<char, Node>(_rootChar, RootNode));
+        return Walk((_rootChar, RootNode));
     }
 
     /// <summary>
@@ -120,11 +115,12 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
 
         foreach (var c in word)
         {
-            if (!node.Children.Get(c, out var value))
+            var child = node.Children.FirstOrDefault(kv => kv.Item1 == c).Item2;
+            if (child == null)
             {
                 return false;
             }
-            node = value;
+            node = child;
         }
         return isPrefix || node.IsWord;
     }
@@ -250,6 +246,11 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
     }
 
     /// <summary>
+    /// Returns the number of words represented by this <see cref="Trie"/>.
+    /// </summary>
+    public int NumWords() => RootNode.NumWords();
+
+    /// <summary>
     /// Removes all words matching the given prefix from the <see cref="Trie"/>.
     /// </summary>
     /// <param name="fragment">The fragment to match</param>
@@ -309,7 +310,7 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
 
         if (fi != null && fi.Exists)
         {
-            trie = new Trie();
+            trie = [];
             try
             {
                 using var reader = fi.OpenText();
@@ -327,7 +328,7 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
                     curLine = await reader.ReadLineAsync();
                 }
 #if DEBUG
-                Debug.WriteLine("Lines read: {0} | Lines added: {1} | NumWords: {2}.", numLinesRead, numLinesAdded, trie.NumWords);
+                Debug.WriteLine("Lines read: {0} | Lines added: {1}.", numLinesRead, numLinesAdded);
 #endif
             }
             catch (Exception ex)
@@ -382,29 +383,30 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
         foreach (var c in word)
         {
             node.Unset(); // force recalculation
-            if (!node.Children.Get(c, out var value))
+            var child = node.Children.FirstOrDefault(kv => kv.Item1 == c).Item2;
+            if (child == null)
             {
-                value = new Node();
-                node.Children.Emplace(c, value);
+                child = new Node();
+                node.Children.Add((c, child));
             }
-            node = value;
+            node = child;
         }
         node.IsWord = true;
         return node;
     }
 
     /// <summary>
-    /// Gets the <see cref="Node"/>s that form the given string as a <see cref="Stack{KeyValuePair{char, Node}}"/>.
+    /// Gets the <see cref="Node"/>s that form the given string as a <see cref="Stack{Tuple{char, Node}}"/>.
     /// </summary>
     /// <param name="s">The <see cref="string"/> to match</param>
     /// <param name="isWord">The <paramref name="s"/> parameter is a word and not a prefix</param>
     /// <returns>A <see cref="Stack{KeyValuePair{char, Node}}"/></returns>
-    private Stack<KeyValuePair<char, Node>> AsStack(string s, bool isWord = true)
+    private Stack<(char, Node)> AsStack(string s, bool isWord = true)
     {
-        var nodes = new Stack<KeyValuePair<char, Node>>(s.Length + 1); // root node is included
+        var nodes = new Stack<(char, Node)>(s.Length + 1); // root node is included
         var _node = Root;
 
-        nodes.Push(new KeyValuePair<char, Node>(_rootChar, _node));
+        nodes.Push((_rootChar, _node));
         foreach (var c in s)
         {
             _node = _node.GetNode(c);
@@ -413,7 +415,7 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
                 nodes.Clear();
                 break;
             }
-            nodes.Push(new KeyValuePair<char, Node>(c, _node));
+            nodes.Push((c, _node));
         }
         if (isWord)
         {
@@ -433,20 +435,20 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
     /// <param name="value">The value> of which to find the word</param>
     private static bool GetWord(List<char> chars, Node node, object value)
     {
-        foreach (var item in node.Children.Entries)
+        foreach (var item in node.Children)
         {
-            var childNode = item.Value;
+            var childNode = item.Item2;
 
             if (childNode.Value != null && childNode.Value.Equals(value))
             {
-                chars.Add(item.Key);
+                chars.Add(item.Item1);
                 return true;
             }
             else
             {
                 if (GetWord(chars, childNode, value))
                 {
-                    chars.Add(item.Key);
+                    chars.Add(item.Item1);
                     return true;
                 }
             }
@@ -455,51 +457,51 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
     }
 
     /// <summary>
-    /// Removes the given prefix and trims the <see cref="Trie">.
+    /// Removes the given prefix and trims the <see cref="Trie"/>.
     /// </summary>
-    private static void RemovePrefix(Stack<KeyValuePair<char, Node>> nodes)
+    private static void RemovePrefix(Stack<(char, Node)> nodes)
     {
-        nodes.Peek().Value.Children.Clear(); // clear the last node
+        nodes.Peek().Item2.Children.Clear(); // clear the last node
         Trim(nodes); // trim excess nodes
     }
 
     /// <summary>
-    /// Removes the given word and trims the <see cref="Trie">.
+    /// Removes the given word and trims the <see cref="Trie"/>.
     /// </summary>
-    private static void RemoveWord(Stack<KeyValuePair<char, Node>> nodes)
+    private static void RemoveWord(Stack<(char, Node)> nodes)
     {
-        nodes.Peek().Value.IsWord = false; // mark the last node as not a word
+        nodes.Peek().Item2.IsWord = false; // mark the last node as not a word
         Trim(nodes); // trim excess nodes
     }
 
     /// <summary>
     /// Removes <see cref="Node"/>s that have become unneeded after removal of one or more words, going up from a <see cref="Node"/> to the root node.
     /// </summary>
-    private static void Trim(Stack<KeyValuePair<char, Node>> nodes)
+    private static void Trim(Stack<(char, Node)> nodes)
     {
         while (nodes.Count > 1)
         {
             var node = nodes.Pop();
-            var parentNode = nodes.Peek().Value;
+            var parentNode = nodes.Peek().Item2;
 
             parentNode.Unset(); // force recalculation
-            if (node.Value.IsWord || node.Value.Children.Count != 0)
+            if (node.Item2.IsWord || node.Item2.Children.Count != 0)
             {
                 break;
             }
-            parentNode.Children.Remove(node.Key);
+            parentNode.Children.Remove((node.Item1, node.Item2));
         }
-        nodes.Peek().Value.Unset(); // root node needs to recalculate as well
+        nodes.Peek().Item2.Unset(); // root node needs to recalculate as well
     }
 
     /// <summary>
     /// Walks depth-first through the tree starting at the given node and returns every <see cref="Node"/> that is encountered, accompanied with its key.
     /// </summary>
-    /// <returns>An <see cref="IEnumerable{KeyValuePair{char, Node}}"/></returns>
-    internal static IEnumerable<KeyValuePair<char, Node>> Walk(KeyValuePair<char, Node> node)
+    /// <returns>An <see cref="IEnumerable{Tuple{char, Node}}"/></returns>
+    internal static IEnumerable<(char, Node)> Walk((char, Node) node)
     {
         yield return node;
-        foreach (var child in node.Value.Children.Entries)
+        foreach (var child in node.Item2.Children)
         {
             foreach (var c in Walk(child))
             {
@@ -519,10 +521,10 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
         {
             yield return buffer.ToString();
         }
-        foreach (var child in node.Children.Entries)
+        foreach (var child in node.Children)
         {
-            buffer.Append(child.Key);
-            foreach (var word in Walk(child.Value, buffer))
+            buffer.Append(child.Item1);
+            foreach (var word in Walk(child.Item2, buffer))
             {
                 yield return word;
             }
@@ -553,12 +555,12 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
         {
             var curMatch = pattern[matchCount];
 
-            foreach (var child in node.Children.Entries)
+            foreach (var child in node.Children)
             {
-                buffer.Append(child.Key);
-                if (curMatch.IsMatch(child.Key)) // keep matching
+                buffer.Append(child.Item1);
+                if (curMatch.IsMatch(child.Item1)) // keep matching
                 {
-                    foreach (var word in Walk(child.Value, pattern, buffer, length, matchCount + 1))
+                    foreach (var word in Walk(child.Item2, pattern, buffer, length, matchCount + 1))
                     {
                         yield return word;
                     }
@@ -567,7 +569,7 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
                 {
                     if (matchCount == 0) // look further
                     {
-                        foreach (var word in Walk(child.Value, pattern, buffer, length, 0))
+                        foreach (var word in Walk(child.Item2, pattern, buffer, length, 0))
                         {
                             yield return word;
                         }
@@ -598,9 +600,9 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
         {
             yield return node.Value;
         }
-        foreach (var child in node.Children.Entries)
+        foreach (var child in node.Children)
         {
-            foreach (var value in Walk(child.Value, curDepth++, length))
+            foreach (var value in Walk(child.Item2, curDepth++, length))
             {
                 yield return value;
             }
@@ -627,12 +629,12 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
         {
             var curMatch = pattern[matchCount];
 
-            foreach (var child in node.Children.Entries)
+            foreach (var child in node.Children)
             {
-                buffer.Append(child.Key);
-                if (curMatch.IsMatch(child.Key)) // keep matching
+                buffer.Append(child.Item1);
+                if (curMatch.IsMatch(child.Item1)) // keep matching
                 {
-                    foreach (var value in WalkValues(child.Value, pattern, buffer,curDepth + 1, length, matchCount + 1))
+                    foreach (var value in WalkValues(child.Item2, pattern, buffer,curDepth + 1, length, matchCount + 1))
                     {
                         yield return value;
                     }
@@ -641,7 +643,7 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
                 {
                     if (matchCount == 0) // look further
                     {
-                        foreach (var value in WalkValues(child.Value, pattern, buffer, curDepth + 1, length, 0))
+                        foreach (var value in WalkValues(child.Item2, pattern, buffer, curDepth + 1, length, 0))
                         {
                             yield return value;
                         }
@@ -661,7 +663,7 @@ public class Trie : IEnumerable, IEnumerable<KeyValuePair<char, Node>>
         }
     }
 
-    public IEnumerator<KeyValuePair<char, Node>> GetEnumerator() => AsEnumerable().GetEnumerator();
+    public IEnumerator<(char, Node)> GetEnumerator() => AsEnumerable().GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => AsEnumerable().GetEnumerator();
 

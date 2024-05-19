@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -41,10 +40,17 @@ internal sealed class SizeOf<T>
     private static int SizeOfObject(Type type, object obj)
     {
         var size = 0;
-        if (type.IsValueType)
+        if (type.IsValueType) // breaks on tuple
         {
-            var nullType = Nullable.GetUnderlyingType(type);
-            size = Marshal.SizeOf(nullType ?? type);
+            try
+            {
+                var nullType = Nullable.GetUnderlyingType(type);
+                size = Marshal.SizeOf(nullType ?? type);
+            }
+            catch
+            {
+                size = SizeOfStruct(obj);
+            }
         }
         else if (obj == null)
         {
@@ -56,8 +62,8 @@ internal sealed class SizeOf<T>
         }
         else if (type.IsArray)
         {
-            var arr = ((Array)obj);
             var elementType = type.GetElementType();
+            var arr = (Array)obj;
 
             if (elementType.IsValueType)
             {
@@ -88,6 +94,48 @@ internal sealed class SizeOf<T>
                 }
             }
         }
+        //else if (type.IsAssignableTo(typeof(IEnumerable)))
+        //{
+        //    var elementType = type.GetGenericArguments().FirstOrDefault();
+            
+        //    if (elementType == null)
+        //    {
+        //        return SizeOfClass(obj);
+        //    }
+        //    else
+        //    {
+        //        var arr = (IEnumerable)obj;
+
+        //        if (elementType.IsValueType)
+        //        {
+        //            try
+        //            {
+        //                if (elementType.IsGenericType)
+        //                {
+        //                    var enumerator = arr.GetEnumerator();
+        //                    while (enumerator.MoveNext())
+        //                    {
+        //                        size += SizeOfStruct(enumerator.Current);
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    size = ((ICollection)arr).Count * Marshal.SizeOf(elementType);
+        //                }
+        //            }
+        //            catch { }
+        //        }
+        //        else
+        //        {
+        //            var enumerator = arr.GetEnumerator();
+
+        //            while (enumerator.MoveNext())
+        //            {
+        //                size += SizeOfObject(elementType, enumerator.Current);
+        //            }
+        //        }
+        //    }
+        //}
         else if (type.IsClass)
         {
             size += SizeOfClass(obj);
@@ -103,7 +151,6 @@ internal sealed class SizeOf<T>
                 size = (int)Marshal.ReadIntPtr(type.TypeHandle.Value, 4);
             }
         }
-
         return size;
     }
 
@@ -118,13 +165,9 @@ internal sealed class SizeOf<T>
     }
 }
 
-internal struct Pin : IDisposable
+internal struct Pin(object o) : IDisposable
 {
-    public GCHandle pinHandle;
-    public Pin(object o)
-    {
-        pinHandle = GCHandle.Alloc(o, GCHandleType.Pinned);
-    }
+    public GCHandle pinHandle = GCHandle.Alloc(o, GCHandleType.Pinned);
 
     public void Dispose()
     {
