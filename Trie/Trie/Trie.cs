@@ -24,7 +24,6 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     private const string _Import = "import";
 
     private static readonly CompositeFormat errImpEx = CompositeFormat.Parse("Unable to {0} '{1}'. See inner exception for details.");
-    private static List<string> mRegisteredTypes = [];
     private static readonly JsonSerializerOptions mSerializerOptions = new() { WriteIndented = false };
 
     #endregion
@@ -37,24 +36,9 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     public Node Root => RootNode;
 
     /// <summary>
-    /// List of registered types that is used in deserialization.
-    /// </summary>
-    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needed for serialization combined with static access.")]
-    public IEnumerable<string> RegisteredTypes
-    {
-        get => mRegisteredTypes;
-        internal set => mRegisteredTypes = value.ToList();
-    }
-
-    /// <summary>
     /// Internally used, mutable root node.
     /// </summary>
     internal Node RootNode { get; set; } = new Node();
-
-    /// <summary>
-    /// Provides access to the list of registered types for the <see cref="NodeSerializer"/> that needs it when deserializing nodes.
-    /// </summary>
-    internal static List<string> Types => mRegisteredTypes;
 
     #endregion
 
@@ -74,23 +58,9 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// </summary>
     /// <param name="word">The <see cref="string"/> to add</param>
     /// <param name="value">The value represented by the <paramref name="word"/></param>
-    public void Add(string word, object value)
+    public void Add(string word, double value)
     {
-        var typeName = value.GetType().AssemblyQualifiedName;
-
-        if (string.IsNullOrEmpty(typeName))
-        {
-            throw new NotSupportedException(nameof(value));
-        }
         var node = AddWord(word);
-        var typeIndex = mRegisteredTypes.IndexOf(typeName);
-
-        if (typeIndex == -1)
-        {
-            mRegisteredTypes.Add(typeName);
-            typeIndex = mRegisteredTypes.Count - 1;
-        }
-        node.TypeIndex = typeIndex;
         node.Value = value;
     }
 
@@ -131,12 +101,8 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// </summary>
     /// <param name="value">The value> to find</param>
     /// <returns>Boolean, <see langword="true"/> if the value exists in the <see cref="Trie"/></returns>
-    public bool ContainsValue(object value)
+    public bool ContainsValue(double value)
     {
-        if (value is null)
-        {
-            throw new ArgumentOutOfRangeException(nameof(value));
-        }
         foreach (var v in Walk(Root))
         {
             if (v != null && value.Equals(v)) // Comparer<object>.Default.Compare(value, v) == 0
@@ -179,7 +145,7 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// </summary>
     /// <param name="word">The <see cref="string"/> to match</param>
     /// <returns>A value if it exists; else <see langword="null"/></returns>
-    public object? FindValue(string word)
+    public double? FindValue(string word)
     {
         if (string.IsNullOrEmpty(word))
         {
@@ -196,7 +162,7 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <param name="fragment">The <see cref="string"/> to match; if <see langword="null"/>: all words are returned</param>
     /// <param name="isPrefix">If <see langword="true"/>, the word should start with this fragment</param>
     /// <returns>An <see cref="IEnumerable{object?}"/></returns>
-    public IEnumerable<object?> FindValues(string fragment, bool isPrefix)
+    public IEnumerable<double?> FindValues(string fragment, bool isPrefix)
     {
         foreach (var value in FindValues(isPrefix ? PatternMatch.FromPrefix(fragment) : PatternMatch.FromFragment(fragment)))
         {
@@ -209,7 +175,7 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// </summary>
     /// <param name="pattern">The <see cref="PatternMatch"/> to match</param>
     /// <returns>An <see cref="IEnumerable{object?}"/> containing the value of all nodes that match the <see cref="PatternMatch"/></returns>
-    public IEnumerable<object?> FindValues(PatternMatch pattern)
+    public IEnumerable<double?> FindValues(PatternMatch pattern)
     {
         foreach (var value in WalkValues(Root, pattern, new StringBuilder(), 0, pattern.Type == PatternMatchType.IsWord ? pattern.Count : 0, 0))            
         {
@@ -239,7 +205,7 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// </summary>
     /// <param name="value">The value for which to find the word</param>
     /// <returns>A <see cref="string"/> if the value could be found, else <see langword="null"></returns>
-    public string? GetWord(object value)
+    public string? GetWord(double value)
     {
         List<char> chars = [];
 
@@ -445,13 +411,13 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <param name="chars">The <see cref="List{char}"/> to append characters to</param>
     /// <param name="node">The <see cref="Node"/> from which to start</param>
     /// <param name="value">The value> of which to find the word</param>
-    private static bool GetWord(List<char> chars, Node node, object value)
+    private static bool GetWord(List<char> chars, Node node, double value)
     {
         foreach (var item in node.Children)
         {
             var childNode = item.Item2;
 
-            if (childNode.Value != null && childNode.Value.Equals(value))
+            if (childNode.Value != null && childNode.Value.Value == value)
             {
                 chars.Add(item.Item1);
                 return true;
@@ -606,7 +572,7 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// </summary>
     /// <param name="curDepth">The depth of the current node</param>
     /// <param name="length">The length of the word</param>
-    private static IEnumerable<object?> Walk(Node node, int curDepth = 0, int length = 0)
+    private static IEnumerable<double?> Walk(Node node, int curDepth = 0, int length = 0)
     {
         if (node.IsWord && (length == 0 || length == curDepth))
         {
@@ -627,8 +593,8 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <param name="node">The <see cref="Node"/> to start from</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to match</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re-)use</param>
-    /// <returns>An <see cref="IEnumerable{object?}"/></returns>
-    private static IEnumerable<object?> WalkValues(Node node, PatternMatch pattern, StringBuilder buffer, int curDepth, int length, int matchCount)
+    /// <returns>An <see cref="IEnumerable{double?}"/></returns>
+    private static IEnumerable<double?> WalkValues(Node node, PatternMatch pattern, StringBuilder buffer, int curDepth, int length, int matchCount)
     {
         if (matchCount == pattern.Count) // all words in this subtree are a match for fragment and prefix pattern types, and for word pattern type when word length matches as well
         {

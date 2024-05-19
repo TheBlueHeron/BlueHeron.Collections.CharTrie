@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using BlueHeron.Collections.Trie.Serialization;
 
 namespace BlueHeron.Collections.Trie;
@@ -7,6 +8,7 @@ namespace BlueHeron.Collections.Trie;
 /// A node in the <see cref="Trie"/>, which represents a character.
 /// </summary>
 [JsonConverter(typeof(NodeSerializer))]
+[StructLayout(LayoutKind.Auto,CharSet = CharSet.Auto)]
 public class Node
 {
     #region Objects and variables
@@ -69,14 +71,9 @@ public class Node
     }
 
     /// <summary>
-    /// Gets the index of the <see cref="Type"/> of the <see cref="Value"/> in the <see cref="Trie.RegisteredTypes"/> list.
-    /// </summary>
-    public int TypeIndex { get; internal set; } = -1;
-
-    /// <summary>
     /// Gets the value that is represented by this node.
     /// </summary>
-    public object? Value { get; internal set; }
+    public double? Value { get; internal set; }
 
     #endregion
 

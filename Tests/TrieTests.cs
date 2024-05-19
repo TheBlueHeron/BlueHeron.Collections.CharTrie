@@ -132,20 +132,17 @@ public class B_TrieMapTests
         Assert.IsFalse(blExistsVal);
 
         var value = trie.FindValue("zijn");
-        Assert.IsTrue(value != null && value.Equals(3.0f));
+        Assert.IsTrue(value != null && value.Equals(3.0));
 
-        var word = trie.GetWord(3.0f);
+        var word = trie.GetWord(3.0);
         Assert.IsTrue(word == "zijn");
-
-        word = trie.GetWord(3); // Int32: not equal
-        Assert.IsTrue(word is null);
     }
 
     [TestMethod]
     public void Find()
     {
         var trie = Create();
-        IEnumerable<object?> values;
+        IEnumerable<double?> values;
 
         values = trie.FindValues("oo", false);
         Assert.IsTrue(values.Count() == 3);
@@ -168,8 +165,7 @@ public class B_TrieMapTests
 
         Assert.IsFalse(node is null || node.Value is null);
         
-        var d = (dynamic)node.Value;
-        Assert.IsTrue(d.PropertyA == true && d.PropertyB == 3.1415);
+        Assert.IsTrue(node.Value == 3.1415);
     }
 
     /// <summary>
@@ -180,12 +176,12 @@ public class B_TrieMapTests
     {
         var tree = new Trie
         {
-            { "woord", 1 }, // typeindex -> 0
-            { "woorden", 2.14 }, // typeindex -> 1
-            { "zijn", 3.0f }, // typeindex -> 2
-            { "wapens", DateTime.Now }, // typeindex -> 3
-            { "logos", new { PropertyA = true, PropertyB = 3.1415 } }, // typeindex -> 4
-            { "lustoord", 7 } // typeindex -> 0
+            { "woord", 1 },
+            { "woorden", 2.14 },
+            { "zijn", 3.0 },
+            { "wapens", 4.321 },
+            { "logos", 3.1415 },
+            { "lustoord", 7 }
         };
 
         return tree;
@@ -235,7 +231,7 @@ public class C_PatternMatchTests
 
         if (trie != null)
         {
-            IEnumerable<object?> values;
+            IEnumerable<double?> values;
             var prefixPattern = new PatternMatch
             {
                 new CharMatch('w') // Default: { Type = CharMatchType.First } -> same as prefix 'w'
@@ -252,12 +248,6 @@ public class C_PatternMatchTests
             prefixPattern.AddRange([CharMatch.Wildcard, new CharMatch('o')]); // where second and fourth letter is an 'o'
             values = trie.FindValues(prefixPattern);
             Assert.IsTrue(values.Count() == 1);
-            prefixPattern.Type = PatternMatchType.IsWord;
-            values = trie.FindValues(prefixPattern); // where second and fourth letter is an 'o' and word is 4 letters long
-            Assert.IsFalse(values.Any());
-            prefixPattern.Add(CharMatch.Wildcard);
-            values = trie.Find(prefixPattern); // where second and fourth letter is an 'o' and word is 5 letters long
-            Assert.IsTrue(values.Count() == 1); // logos :)
         }
     }
 
@@ -299,14 +289,14 @@ public class C_PatternMatchTests
 
         if (trie != null)
         {
-            IEnumerable<object?> values;
+            IEnumerable<double?> values;
             var wordPattern = new PatternMatch() { Type = PatternMatchType.IsWord };
 
             wordPattern.AddRange([CharMatch.Wildcard, new CharMatch('o'), CharMatch.Wildcard, new CharMatch('o')]); // where second and fourth letter is an 'o'
             values = trie.FindValues(wordPattern); // where second and fourth letter is an 'o' and word is 4 letters long
             Assert.IsFalse(values.Any());
             wordPattern.Add(CharMatch.Wildcard);
-            values = trie.Find(wordPattern); // where second and fourth letter is an 'o' and word is 5 letters long
+            values = trie.FindValues(wordPattern); // where second and fourth letter is an 'o' and word is 5 letters long
             Assert.IsTrue(values.Count() == 1); // logos :)
         }
     }
@@ -355,7 +345,7 @@ public class C_PatternMatchTests
 
         if (trie != null)
         {
-            IEnumerable<object?> values;
+            IEnumerable<double?> values;
             // all words that contain the pattern 'o*d' -> 'woord', 'woorden', 'lustoord'
             var fragmentPattern = new PatternMatch([new CharMatch('o'), CharMatch.Wildcard, new CharMatch('d')], PatternMatchType.IsFragment);
 

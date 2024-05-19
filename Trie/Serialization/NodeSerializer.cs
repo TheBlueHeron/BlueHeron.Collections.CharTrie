@@ -12,29 +12,8 @@ public class NodeSerializer : JsonConverter<Node>
 
     private const string _C = "c"; // NumChildren
     private const string _R = "r"; // RemainingDepth
-    private const string _T = "t"; // TypeIndex
     private const string _V = "v"; // Value
     private const string _W = "w"; // IsWord
-
-    #endregion
-
-    #region Private methods and functions
-
-    /// <summary>
-    /// Writes the <see cref="Node.Value"/>.
-    /// </summary>
-    /// <param name="writer">The <see cref="Utf8JsonWriter"/> to write to</param>
-    /// <param name="node">The <see cref="Node"/> whose value to serialize</param>
-    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
-    protected static void WriteValue(Utf8JsonWriter writer, Node node, JsonSerializerOptions options)
-    {
-        if (node.Value != null)
-        {
-            writer.WriteNumber(_T, node.TypeIndex);
-            writer.WritePropertyName(_V);
-            writer.WriteRawValue(JsonSerializer.Serialize(node.Value, options));
-        }
-    }
 
     #endregion
 
@@ -62,7 +41,10 @@ public class NodeSerializer : JsonConverter<Node>
         {
             writer.WriteNumber(_R, value.RemainingDepth);
         }
-        WriteValue(writer, value, options);
+        if (value.Value != null)
+        {
+            writer.WriteNumber(_V, value.Value.Value);
+        }
         writer.WriteEndObject();
     }
 

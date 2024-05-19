@@ -11,7 +11,6 @@ public sealed class TrieConverter : JsonConverter<Trie>
     #region Fields
 
     private const string _N = "n"; // Nodes
-    private const string _T = "t"; // Types
 
     #endregion
 
@@ -48,7 +47,7 @@ public sealed class TrieConverter : JsonConverter<Trie>
                                 {
                                     ParseNode(ref reader, node, options);
                                 }
-                                var root = new Node() { IsWord = node.IsWord, RemainingDepth = node.RemainingDepth, TypeIndex = node.TypeIndex, Value = node.Value };  // loose NumChildren field
+                                var root = new Node() { IsWord = node.IsWord, RemainingDepth = node.RemainingDepth, Value = node.Value };  // loose NumChildren field
 
                                 foreach (var item in node.Children)
                                 {
@@ -59,7 +58,7 @@ public sealed class TrieConverter : JsonConverter<Trie>
                             }
                             else // current node is child of parent node
                             {
-                                var child = new Node { IsWord = node.IsWord, RemainingDepth = node.RemainingDepth, TypeIndex = node.TypeIndex, Value = node.Value };  // loose NumChildren field
+                                var child = new Node { IsWord = node.IsWord, RemainingDepth = node.RemainingDepth, Value = node.Value };  // loose NumChildren field
 
                                 parentNode.Children.Add((c, child));
                                 while (node.NumChildren > node.Children.Count) // next node is child of current node
@@ -95,23 +94,7 @@ public sealed class TrieConverter : JsonConverter<Trie>
                 case JsonTokenType.PropertyName:
                     if (reader.GetString() is string key)
                     {
-                        if (key == _T)
-                        {
-                            using var doc = JsonDocument.ParseValue(ref reader);
-                            var types = JsonSerializer.Deserialize<IEnumerable<string>>(doc.RootElement, options);
-
-                            if (types != null && types.Any())
-                            {
-                                foreach (var type in types)
-                                {
-                                    if (!Trie.Types.Contains(type))
-                                    {
-                                        Trie.Types.Add(type);
-                                    }
-                                }
-                            }
-                        }
-                        else if (key == _N)
+                        if (key == _N)
                         {
                             while (reader.Read())
                             {
@@ -143,11 +126,6 @@ public sealed class TrieConverter : JsonConverter<Trie>
     public override void Write(Utf8JsonWriter writer, Trie value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        if (value.RegisteredTypes.Any()) // serialize RegisteredTypes
-        {
-            writer.WritePropertyName(_T);
-            writer.WriteRawValue(JsonSerializer.Serialize(value.RegisteredTypes));
-        }
         writer.WritePropertyName(_N);
         writer.WriteStartArray();
         foreach (var item in value.AsEnumerable()) // serialize Trie nodes as an array of nodes

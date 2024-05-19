@@ -4,7 +4,7 @@ using BlueHeron.Collections.Trie.Serialization;
 namespace BlueHeron.Collections.Trie;
 
 /// <summary>
-/// A <see cref="Node"/> that has a field that represents the expected number of child <see cref="Node"/>s.
+/// A <see cref="Node"/> that has a field that represents the expected number of child <see cref="Node"/>s, needed in deserialization.
 /// </summary>
 [JsonConverter(typeof(NodeDeserializer))]
 public sealed class DeserializedNode: Node
