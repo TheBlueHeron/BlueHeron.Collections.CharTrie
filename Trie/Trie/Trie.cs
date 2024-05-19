@@ -32,7 +32,7 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     #region Properties
 
     /// <summary>
-    /// The root <see cref="Node"/>.
+    /// Gets the root <see cref="Node"/>.
     /// </summary>
     public Node Root => RootNode;
 
@@ -216,6 +216,12 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
             yield return value;
         }
     }
+
+    /// <summary>
+    /// Returns an <see cref="IEnumerator{Tuple{char, Node}}"/> that allows for enumerating all <see cref="Tuple{Char, Node}"/>s in this <see cref="Trie"/>.
+    /// </summary>
+    /// <returns>An <see cref="IEnumerator{Tuple{char, Node}}"/></returns>
+    public IEnumerator<(char, Node)> GetEnumerator() => AsEnumerable().GetEnumerator();
 
     /// <summary>
     /// Gets the <see cref="Node"/> in this <see cref="Trie"/> that represents the given prefix, if it exists. Else <see langword="null"/> is returned.
@@ -426,6 +432,12 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
         }
         return nodes;
     }
+
+    /// <summary>
+    /// Returns an <see cref="IEnumerator"/> that allows for enumerating all <see cref="Tuple{Char, Node}"/>s in this <see cref="Trie"/>.
+    /// </summary>
+    /// <returns>An <see cref="IEnumerator"/></returns>
+    IEnumerator IEnumerable.GetEnumerator() => AsEnumerable().GetEnumerator();
 
     /// <summary>
     /// Returns the first word that carries the given <see cref="Node.Value"/>, starting from the given node.
@@ -662,10 +674,6 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
             }
         }
     }
-
-    public IEnumerator<(char, Node)> GetEnumerator() => AsEnumerable().GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => AsEnumerable().GetEnumerator();
 
     #endregion
 }

@@ -130,37 +130,3 @@ public class Node
 
     #endregion
 }
-
-/// <summary>
-/// A <see cref="Node"/> that has a field that represents the expected number of child <see cref="Node"/>s.
-/// </summary>
-[JsonConverter(typeof(NodeDeserializer))]
-public sealed class DeserializedNode: Node
-{
-    private int? mNumChildren;
-
-    /// <summary>
-    /// The expected number of <see cref="Node"/>s in the <see cref="Node.Children"/> collection.
-    /// </summary>
-    public int NumChildren
-    {
-        get
-        {
-            if (!mNumChildren.HasValue)
-            {
-                mNumChildren = Children.Count;
-            }
-            return mNumChildren.Value;
-        }
-        internal set => mNumChildren = value;
-    }
-
-    #region Construction
-
-    /// <summary>
-    /// Creates a new <see cref="DeserializedNode"/>.
-    /// </summary>
-    public DeserializedNode() : base(true) { }
-
-    #endregion
-}
