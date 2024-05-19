@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace BlueHeron.Collections.Trie.Serialization;
 
 /// <summary>
-/// A <see cref="JsonConverter{DeserializedNode}"/> that minimizes output.
+/// A <see cref="JsonConverter{DeserializedNode}"/>.
 /// </summary>
 public class NodeDeserializer : JsonConverter<DeserializedNode>
 {
