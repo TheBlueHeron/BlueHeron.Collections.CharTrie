@@ -134,9 +134,19 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <returns>An <see cref="IEnumerable{string}"/> containing all words that match the pattern</returns>
     public IEnumerable<string> Find(PatternMatch pattern)
     {
-        foreach (var word in Walk(Root, pattern, new StringBuilder(), pattern.Count, 0))
+        if (pattern.Type == PatternMatchType.IsFragment)
         {
-            yield return word;
+            foreach (var word in WalkContaining(Root, pattern, new StringBuilder(), 0, 0))
+            {
+                yield return word;
+            }
+        }
+        else
+        {
+            foreach (var word in Walk(Root, pattern, new StringBuilder(), pattern.Type == PatternMatchType.IsWord ? pattern.Count : 0, 0))
+            {
+                yield return word;
+            }
         }
     }
 
@@ -177,9 +187,19 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <returns>An <see cref="IEnumerable{object?}"/> containing the value of all nodes that match the <see cref="PatternMatch"/></returns>
     public IEnumerable<double?> FindValues(PatternMatch pattern)
     {
-        foreach (var value in WalkValues(Root, pattern, new StringBuilder(), 0, pattern.Type == PatternMatchType.IsWord ? pattern.Count : 0, 0))            
+        if (pattern.Type == PatternMatchType.IsFragment)
         {
-            yield return value;
+            foreach (var value in WalkValuesContaining(Root, pattern, new StringBuilder(), 0, 0, 0))
+            {
+                yield return value;
+            }
+        }
+        else
+        {
+            foreach (var value in WalkValues(Root, pattern, new StringBuilder(), 0, pattern.Type == PatternMatchType.IsWord? pattern.Count : 0, 0))
+            {
+                yield return value;
+            }
         }
     }
 
@@ -519,7 +539,7 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
     private static IEnumerable<string> Walk(Node node, PatternMatch pattern, StringBuilder buffer, int length, int matchCount)
     {
-        if (matchCount == pattern.Count) // all words in this subtree are a match for fragment and prefix pattern types, and for word pattern type when word length matches as well
+        if (matchCount == pattern.Count) // all words in this subtree are a match for prefix pattern types, and for word pattern type if word length matches as well
         {
             foreach (var word in Walk(node, buffer))
             {
@@ -543,27 +563,36 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
                         yield return word;
                     }
                 }
-                else if (pattern.Type == PatternMatchType.IsFragment) // start over
-                {
-                    if (matchCount == 0) // look further
-                    {
-                        foreach (var word in Walk(child.Item2, pattern, buffer, length, 0))
-                        {
-                            yield return word;
-                        }
-                    }
-                    else
-                    {
-                        buffer.Length--;
-                        foreach (var word in Walk(node, pattern, buffer, length, 0))
-                        {
-                            yield return word;
-                        }
-                        continue;
-                    }
-                }
                 buffer.Length--;
             }            
+        }
+    }
+
+    /// <summary>
+    /// Tries to retrieve all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="Node"/>.
+    /// </summary>
+    /// <param name="node">The <see cref="Node"/> to start from</param>
+    /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
+    /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
+    /// <returns>An <see cref="IEnumerable{string}"/></returns>
+    private static IEnumerable<string> WalkContaining(Node node, PatternMatch pattern, StringBuilder buffer, int length, int matchCount)
+    {
+        var charToMatch = pattern[0];
+        foreach (var child in node.Children)
+        {
+            buffer.Append(child.Item1);
+            if (charToMatch.IsMatch(child.Item1) && node.RemainingDepth >= pattern.Count) // char is a match; try to match remaining strings to remaining pattern if possible
+            {
+                foreach (var word in Walk(child.Item2, new PatternMatch(pattern.Skip(1), PatternMatchType.IsPrefix), buffer, length, 0))
+                {
+                    yield return word;
+                }
+            }
+            foreach (var word in WalkContaining(child.Item2, pattern, buffer, length,0)) // TODO: this is not optimal and should only be done in branches without results
+            {
+                yield return word;
+            }
+            buffer.Length--;
         }
     }
 
@@ -580,7 +609,7 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
         }
         foreach (var child in node.Children)
         {
-            foreach (var value in Walk(child.Item2, curDepth++, length))
+            foreach (var value in Walk(child.Item2, ++curDepth, length))
             {
                 yield return value;
             }
@@ -596,11 +625,14 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <returns>An <see cref="IEnumerable{double?}"/></returns>
     private static IEnumerable<double?> WalkValues(Node node, PatternMatch pattern, StringBuilder buffer, int curDepth, int length, int matchCount)
     {
-        if (matchCount == pattern.Count) // all words in this subtree are a match for fragment and prefix pattern types, and for word pattern type when word length matches as well
+        if (matchCount == pattern.Count) // all words in this subtree are a match for prefix pattern types, and for word pattern type when word length matches as well
         {
-            foreach (var value in Walk(node, curDepth + 1, length))
+            foreach (var value in Walk(node, curDepth, length))
             {
-                yield return value;
+                if (pattern.Type != PatternMatchType.IsWord || curDepth == length)
+                {
+                    yield return value;
+                }
             }
         }
         else if (node.RemainingDepth >= pattern.Count - matchCount) // words are available that may be matched to the (remaining) pattern
@@ -617,27 +649,36 @@ public class Trie : IEnumerable, IEnumerable<(char, Node)>
                         yield return value;
                     }
                 }
-                else if (pattern.Type == PatternMatchType.IsFragment) // start over
-                {
-                    if (matchCount == 0) // look further
-                    {
-                        foreach (var value in WalkValues(child.Item2, pattern, buffer, curDepth + 1, length, 0))
-                        {
-                            yield return value;
-                        }
-                    }
-                    else
-                    {
-                        buffer.Length--;
-                        foreach (var value in WalkValues(node, pattern, buffer, curDepth, length, 0))
-                        {
-                            yield return value;
-                        }
-                        continue;
-                    }
-                }
                 buffer.Length--;
             }
+        }
+    }
+
+    /// <summary>
+    /// Tries to retrieve all values that match the given <see cref="PatternMatch"/> starting from the given <see cref="Node"/>.
+    /// </summary>
+    /// <param name="node">The <see cref="Node"/> to start from</param>
+    /// <param name="pattern">The <see cref="PatternMatch"/> to match</param>
+    /// <param name="buffer">The <see cref="StringBuilder"/> to (re-)use</param>
+    /// <returns>An <see cref="IEnumerable{double?}"/></returns>
+    private static IEnumerable<double?> WalkValuesContaining(Node node, PatternMatch pattern, StringBuilder buffer, int curDepth, int length, int matchCount)
+    {
+        var charToMatch = pattern[0];
+        foreach (var child in node.Children)
+        {
+            buffer.Append(child.Item1);
+            if (charToMatch.IsMatch(child.Item1) && node.RemainingDepth >= pattern.Count) // char is a match; try to match remaining strings to remaining pattern if possible
+            {
+                foreach (var word in WalkValues(child.Item2, new PatternMatch(pattern.Skip(1), PatternMatchType.IsPrefix), buffer,curDepth + 1, length, 0))
+                {
+                    yield return word;
+                }
+            }
+            foreach (var value in WalkValuesContaining(child.Item2, pattern, buffer, curDepth + 1, length, matchCount + 1)) // look further
+            {
+                yield return value;
+            }
+            buffer.Length--;
         }
     }
 

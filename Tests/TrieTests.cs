@@ -124,7 +124,7 @@ public class B_TrieMapTests
     {
         var trie = Create();
         var values = trie.FindValues(string.Empty, true).ToList(); // find all
-        var blExistsVal = trie.ContainsValue(3.0f); // should exist
+        var blExistsVal = trie.ContainsValue(3.0); // should exist
 
         Assert.IsTrue(values.Count == 6 && blExistsVal);
 
@@ -335,6 +335,11 @@ public class C_PatternMatchTests
 
             words = trie.Find(us_oPattern);
             Assert.IsTrue(words.Count() == 1); // 'lUStOord'
+
+            var fragmentPattern = new PatternMatch([new CharMatch('o'), CharMatch.Wildcard, new CharMatch('d')], PatternMatchType.IsFragment);
+
+            words = trie.Find(fragmentPattern);
+            Assert.IsTrue(words.Count() == 3);
         }
     }
 

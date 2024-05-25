@@ -53,6 +53,7 @@ public static class GuidExtensions
     /// </summary>
     /// <param name="text">This string</param>
     /// <returns>An <see cref="IEnumerable{CharMatch}"/></returns>
+    [DebuggerStepThrough()]
     public static Regex ToRegex(this IEnumerable<char?> pattern)
     {
         var input = string.Empty;
