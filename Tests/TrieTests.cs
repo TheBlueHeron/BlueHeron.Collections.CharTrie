@@ -399,9 +399,9 @@ public class E_BenchMarking
 {
     #region Constants
 
-    private const string fmtMemoryHeader = "| Object |         Size |";
-    private const string fmtMemoryRowBorder = "|--------|--------------|";
-    private const string fmtMemoryRow = "| {0,6:###} | {1,10:###} B |";
+    private const string fmtMemoryHeader = "| Object |    # Nodes |         Size |";
+    private const string fmtMemoryRowBorder = "|--------|------------|--------------|";
+    private const string fmtMemoryRow = "| {0,6:###} | {1,10:###} | {2,10:###} B |";
     private const string fmtSpeedHeader = "|            Operation | # Runs | Minimum (탎ec.) | Maximum (탎ec.) | Average (탎ec.) | Median (탎ec.) |";
     private const string fmtSpeedRowBorder = "|----------------------|--------|-----------------|-----------------|-----------------|----------------|";
     private const string fmtSpeedRow = "| {0,20:###} | {1,6:###} | {2,15:##0.0} | {3,15:##0.0} | {4,15:##0.0} | {5,14:##0.0} |";
@@ -413,7 +413,7 @@ public class E_BenchMarking
     {
         List<string> lstWords = [];
         List<string> lstTestWords = [];
-        List<string> lstPrefixes = ["aan", "op", "in", "ver", "mee", "hoog", "laag", "tussen", "ter", "over"];
+        List<string> lstPrefixes = ["aan", "op", "in", "ver", "mee", "hoog", "laag", "tussen", "ter", "over"]; // high prevalence prefixes (in dutch anyway)
         List<char?[]> lstPatterns = [['o', 'r', 'd'], ['g', null, 's'], ['o', null, 'o']];
 
         BenchMarkResult bmListContains = new();
@@ -451,9 +451,9 @@ public class E_BenchMarking
 
             // output memory benchmark results
             WriteMemoryBenchmarkHeader();
-            WriteMemoryBenchmarkRow("List", listMem);
+            WriteMemoryBenchmarkRow("List", lstWords.Count, listMem);
             WriteMemoryBenchmarkBorder();
-            WriteMemoryBenchmarkRow("Trie", trieMem);
+            WriteMemoryBenchmarkRow("Trie", trie.NumNodes(), trieMem);
             WriteMemoryBenchmarkBorder();
             Debug.WriteLine(string.Empty);
 
@@ -474,16 +474,6 @@ public class E_BenchMarking
 
                 Assert.IsTrue(existsList && existsTrie); // tegridy check
             }
-            foreach (var pattern in lstPatterns) // pattern test
-            {
-                var numList = 0;
-                var numTrie = 0;
-
-                bmListPattern.AddResult(TestListContainsPattern(lstWords, pattern, ref numList));
-                bmTriePattern.AddResult(TestTrieContainsPattern(trie, pattern, ref numTrie));
-
-                Assert.IsTrue(numList <= numTrie); // tegridy check
-            }
             foreach (var prefix in lstPrefixes) // prefix test
             {
                 var numList = 0;
@@ -494,20 +484,32 @@ public class E_BenchMarking
 
                 Assert.IsTrue(numList == numTrie); // tegridy check
             }
+            foreach (var pattern in lstPatterns) // pattern test
+            {
+                var numList = 0;
+                var numTrie = 0;
+
+                bmListPattern.AddResult(TestListContainsPattern(lstWords, pattern, ref numList));
+                bmTriePattern.AddResult(TestTrieContainsPattern(trie, pattern, ref numTrie));
+
+                Assert.IsTrue(numList <= numTrie); // tegridy check
+            }
 
             // output speed benchmark results
             WriteSpeedBenchmarkHeader();
             WriteSpeedBenchmarkRow("List Contains", bmListContains);
             WriteSpeedBenchmarkRow("Trie Contains", bmTrieContains);
             WriteSpeedBenchmarkBorder();
-            WriteSpeedBenchmarkRow("List Pattern", bmListPattern);
-            WriteSpeedBenchmarkRow("Trie Find(pattern)", bmTriePattern);
-            WriteSpeedBenchmarkBorder();
             WriteSpeedBenchmarkRow("List StartsWith", bmListPrefix);
             WriteSpeedBenchmarkRow("Trie Find(prefix)", bmTriePrefix);
             WriteSpeedBenchmarkBorder();
+            WriteSpeedBenchmarkRow("List Pattern", bmListPattern);
+            WriteSpeedBenchmarkRow("Trie Find(pattern)", bmTriePattern);
+            WriteSpeedBenchmarkBorder();
         }
     }
+
+    #region Tests
 
     /// <summary>
     /// Calls <see cref="List{string}.Contains(string)"/> and returns the duration of the call.
@@ -609,6 +611,10 @@ public class E_BenchMarking
         return DateTime.Now - start;
     }
 
+    #endregion
+
+    #region Output
+
     /// <summary>
     /// Outputs result table separator row to debug window.
     /// </summary>
@@ -631,10 +637,11 @@ public class E_BenchMarking
     /// Outputs result table result row to debug window.
     /// </summary>
     /// <param name="objectName">The name of the object</param>
+    /// <param name="numNodes">The number of nodes in the object</param>
     /// <param name="memUsage">The memory usage in bytes</param>
-    private static void WriteMemoryBenchmarkRow(string objectName, long memUsage)
+    private static void WriteMemoryBenchmarkRow(string objectName, int numNodes, long memUsage)
     {
-        Debug.WriteLine(fmtMemoryRow, objectName, memUsage);
+        Debug.WriteLine(fmtMemoryRow, objectName, numNodes, memUsage);
     }
 
     /// <summary>
@@ -662,4 +669,6 @@ public class E_BenchMarking
     {
         Debug.WriteLine(fmtSpeedRow, testName, row.NumTests, row.MinDuration, row.MaxDuration, row.AverageDuration, row.MedianDuration);
     }
+
+    #endregion
 }

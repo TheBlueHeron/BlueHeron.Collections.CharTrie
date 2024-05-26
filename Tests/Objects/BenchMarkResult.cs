@@ -39,9 +39,9 @@ internal sealed class BenchMarkResult
     public void AddResult(TimeSpan duration)
     {
         NumTests++;
-        AverageDuration += (duration.TotalMicroseconds - AverageDuration) / NumTests; // don't store total. Its value may overflow.
+        AverageDuration += (duration.TotalMicroseconds - AverageDuration) / NumTests; // don't store total of durations. Its value may overflow.
         MaxDuration = Math.Max(MaxDuration, duration.TotalMicroseconds);
-        MinDuration = Math.Min(MaxDuration, duration.TotalMicroseconds);
+        MinDuration = Math.Min(MinDuration, duration.TotalMicroseconds);
         var currentMedianEstimate = (MaxDuration + MinDuration) / 2; // if new duration is closer to the current estimated median, store it
         if (Math.Abs(MedianDuration - currentMedianEstimate) > Math.Abs(duration.TotalMicroseconds - currentMedianEstimate))
         {

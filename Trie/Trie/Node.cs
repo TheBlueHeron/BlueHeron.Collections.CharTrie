@@ -109,21 +109,15 @@ public class Node
     }
 
     /// <summary>
+    /// Returns the total number of<see cref="Node"/>s under this <see cref="Node"/>, including this <see cref="Node"/> itself.
+    /// </summary>
+    public int NumNodes() => 1 + mChildren.Sum(kv => kv.Item2.NumNodes());
+
+    /// <summary>
     /// Returns the number of words represented by this <see cref="Node"/> and its children.
     /// </summary>
     public int NumWords() => (IsWord ? 1 : 0) + mChildren.Sum(kv => kv.Item2.NumWords());
 
     #endregion
 
-    #region Private methods and functions
-
-    /// <summary>
-    /// Sets all numeric fields to -1, forcing recalculation.
-    /// </summary>
-    internal void Unset()
-    {
-        mRemainingDepth = -1;
-    }
-
-    #endregion
 }
