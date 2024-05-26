@@ -13,8 +13,8 @@ public class Node
 {
     #region Objects and variables
 
-    private int mRemainingDepth;
-    private readonly HashSet<(char, Node)> mChildren;
+    protected int mRemainingDepth;
+    protected HashSet<(char, Node)> mChildren;
 
     #endregion
 
@@ -96,6 +96,10 @@ public class Node
     /// <returns>The <see cref="Node"/> representing the given <see cref="string"/> if it exists; else <see langword="null"/></returns>
     public Node? GetNode(string prefix)
     {
+        if (string.IsNullOrEmpty(prefix))
+        {
+            throw new ArgumentNullException(nameof(prefix));
+        }
         var node = this;
         foreach (var prefixChar in prefix)
         {
@@ -117,6 +121,11 @@ public class Node
     /// Returns the number of words represented by this <see cref="Node"/> and its children.
     /// </summary>
     public int NumWords() => (IsWord ? 1 : 0) + mChildren.Sum(kv => kv.Item2.NumWords());
+
+    /// <summary>
+    /// Returns this <see cref="Node"/> as a <see cref="RetryNode"/>.
+    /// </summary>
+    internal RetryNode ToRetry() => new(mChildren, mRemainingDepth, IsWord);
 
     #endregion
 

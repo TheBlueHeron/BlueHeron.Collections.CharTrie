@@ -7,7 +7,7 @@ namespace BlueHeron.Collections.Trie;
 /// A <see cref="Node"/> that has a field that represents the expected number of child <see cref="Node"/>s, needed in deserialization.
 /// </summary>
 [JsonConverter(typeof(NodeDeserializer))]
-public sealed class DeserializedNode: Node
+internal sealed class DeserializedNode: Node
 {
     #region Objects and variables
 
@@ -40,7 +40,7 @@ public sealed class DeserializedNode: Node
     /// <summary>
     /// Creates a new <see cref="DeserializedNode"/>.
     /// </summary>
-    public DeserializedNode() : base(true) { }
+    internal DeserializedNode() : base(true) { }
 
     #endregion
 }

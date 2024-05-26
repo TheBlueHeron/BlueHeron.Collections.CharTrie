@@ -56,6 +56,7 @@ public static class GuidExtensions
     [DebuggerStepThrough()]
     public static Regex ToRegex(this IEnumerable<char?> pattern)
     {
+        ArgumentNullException.ThrowIfNull(pattern, nameof(pattern));
         var input = string.Empty;
 
         foreach (var item in pattern)
@@ -97,6 +98,9 @@ public static class GuidExtensions
     /// </summary>
     /// <param name="id">This <see cref="Guid"/></param>
     /// <returns>A <see cref="string"/> containing the numbers only</returns>
-    [DebuggerStepThrough()] 
-    public static string ToWord(this Guid id) => id.ToString().Replace(_MINUS, string.Empty);
+    [DebuggerStepThrough()]
+    public static string ToWord(this Guid id)
+    {
+        return id.ToString().Replace(_MINUS, string.Empty, StringComparison.InvariantCultureIgnoreCase);
+    }
 }

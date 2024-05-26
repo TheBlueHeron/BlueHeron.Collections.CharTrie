@@ -7,7 +7,7 @@ namespace BlueHeron.Collections.Trie.Serialization;
 /// A <see cref="JsonConverter{Node}"/> that minimizes output.
 /// The node will be serialized with an extra field, containing the number of children.
 /// </summary>
-public class NodeSerializer : JsonConverter<Node>
+internal sealed class NodeSerializer : JsonConverter<Node>
 {
     #region Fields
 

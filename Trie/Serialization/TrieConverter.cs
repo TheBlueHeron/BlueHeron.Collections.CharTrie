@@ -6,7 +6,7 @@ namespace BlueHeron.Collections.Trie.Serialization;
 /// <summary>
 /// A <see cref="JsonConverter"/> that serializes and deserializes a <see cref="Trie"/>.
 /// </summary>
-public sealed class TrieConverter : JsonConverter<Trie>
+internal sealed class TrieConverter : JsonConverter<Trie>
 {
     #region Fields
 

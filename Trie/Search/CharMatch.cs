@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace BlueHeron.Collections.Trie.Search;
@@ -74,6 +75,7 @@ public class CharMatch
     /// </summary>
     /// <param name="character">The character to match</param>
     /// <returns>Boolean, <see langword="true"/> if the character is a match</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsMatch(char character)
     {
         if (Primary == null)

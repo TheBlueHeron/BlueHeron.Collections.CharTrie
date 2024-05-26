@@ -15,6 +15,14 @@
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<Optimize>true</Optimize>
+		<IsAotCompatible>False</IsAotCompatible>
+		<IsTrimmable>False</IsTrimmable>
+		<WarningLevel>7</WarningLevel>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <IsAotCompatible>False</IsAotCompatible>
+	  <IsTrimmable>False</IsTrimmable>
+	  <WarningLevel>7</WarningLevel>
 	</PropertyGroup>
 	<ItemGroup>
 	  <Compile Remove="Trie\Node2.cs" />

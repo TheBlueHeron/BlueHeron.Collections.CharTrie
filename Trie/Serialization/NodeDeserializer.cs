@@ -6,7 +6,7 @@ namespace BlueHeron.Collections.Trie.Serialization;
 /// <summary>
 /// A <see cref="JsonConverter{DeserializedNode}"/>.
 /// </summary>
-public class NodeDeserializer : JsonConverter<DeserializedNode>
+internal sealed class NodeDeserializer : JsonConverter<DeserializedNode>
 {
     #region Fields
 
