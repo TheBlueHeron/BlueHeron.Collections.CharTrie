@@ -503,7 +503,7 @@ public class E_BenchMarking
             WriteSpeedBenchmarkRow("List StartsWith", bmListPrefix);
             WriteSpeedBenchmarkRow("Trie Find(prefix)", bmTriePrefix);
             WriteSpeedBenchmarkBorder();
-            WriteSpeedBenchmarkRow("List Pattern", bmListPattern);
+            WriteSpeedBenchmarkRow("List Regex", bmListPattern);
             WriteSpeedBenchmarkRow("Trie Find(pattern)", bmTriePattern);
             WriteSpeedBenchmarkBorder();
         }

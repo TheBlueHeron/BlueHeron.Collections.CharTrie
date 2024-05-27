@@ -6,7 +6,7 @@ using BlueHeron.Collections.Trie.Search;
 namespace BlueHeron.Collections;
 
 /// <summary>
-/// Extension functions for use with <see cref="Trie.Trie"/>s.
+/// Extension functions for use with a <see cref="Trie.Trie"/>.
 /// </summary>
 public static class GuidExtensions
 {
@@ -72,7 +72,7 @@ public static class GuidExtensions
     /// <summary>
     /// Tries to create a <see cref="Guid"/> from the given string.
     /// </summary>
-    /// <param name="id">The condensed string representation of the <see cref="Guid"/></param>
+    /// <param name="id">The condensed string representation of the <see cref="Guid"/>, i.e. the guid without minus signs</param>
     /// <returns>A <see cref="Guid"/></returns>
     [DebuggerStepThrough()]
     public static Guid ToGuid(this string id)

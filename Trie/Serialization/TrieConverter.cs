@@ -41,6 +41,7 @@ internal sealed class TrieConverter : JsonConverter<Trie>
                         node = JsonSerializer.Deserialize<DeserializedNode>(doc.RootElement, options);
                         if (node != null)
                         {
+                            //node.mChildren= new HashSet<(char, Node)>(node.NumChildren); // This increaes memory usage instead of decreasing it!
                             if (parentNode == null) // current node is root node
                             {
                                 while (node.NumChildren > node.Children.Count)  // next node is child of current node

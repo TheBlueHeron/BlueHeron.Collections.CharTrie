@@ -14,7 +14,7 @@ public class Node
     #region Objects and variables
 
     protected int mRemainingDepth;
-    protected HashSet<(char, Node)> mChildren;
+    protected internal HashSet<(char, Node)> mChildren;
 
     #endregion
 
