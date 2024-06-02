@@ -12,7 +12,6 @@ namespace BlueHeron.Collections.Trie;
 /// <summary>
 /// A search optimized data structure for words.
 /// </summary>
-/// <typeparam name="TNode">The type of the nodes</typeparam>
 [JsonConverter(typeof(TrieConverter))]
 [SuppressMessage("Performance", "CA1710:Rename to end with Collection or Dictionary", Justification = "A fitting name already exists.")]
 public sealed class Trie : IEnumerable, IEnumerable<(char, Node)>

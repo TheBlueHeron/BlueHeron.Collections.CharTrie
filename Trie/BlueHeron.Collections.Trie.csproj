@@ -24,7 +24,4 @@
 	  <IsTrimmable>False</IsTrimmable>
 	  <WarningLevel>7</WarningLevel>
 	</PropertyGroup>
-	<ItemGroup>
-	  <Compile Remove="Trie\Node2.cs" />
-	</ItemGroup>
 </Project>

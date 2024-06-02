@@ -672,3 +672,22 @@ public class E_BenchMarking
 
     #endregion
 }
+
+[TestClass]
+public class F_StructRefactoring
+{
+    [TestMethod]
+    public void Create()
+    {
+        var trie = new Trie2();
+
+        trie.Add("woord");
+        trie.Add("woorden");
+        trie.Add("zijn");
+        trie.Add("wapens");
+        trie.Add("logos");
+        trie.Add("lustoord");
+
+        Assert.IsTrue(1 == 1);
+    }
+}
