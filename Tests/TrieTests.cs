@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using BlueHeron.Collections.Trie.Search;
@@ -13,6 +14,7 @@ public class A_TrieTests
     {
         var trie = Create();
 
+        Assert.IsTrue(trie.NumWords() == 6);
         Assert.IsTrue(trie.Contains("woo", true));
 
         var node = trie.GetNode("woord");
@@ -29,9 +31,9 @@ public class A_TrieTests
         var trie = Create();
 
         trie.Remove("woo", true);
-        Assert.IsTrue(trie.Where(kv => kv.Item2.IsWord).Count() == 4); // two words must have been removed
+        Assert.IsTrue(trie.NumWords() == 4); // two words must have been removed
         trie.Remove("wapens", false);
-        Assert.IsTrue(trie.Where(kv => kv.Item2.IsWord).Count() == 3); // one word must have been been removed
+        Assert.IsTrue(trie.NumWords() == 3); // one word must have been been removed
     }
 
     [TestMethod]
@@ -89,7 +91,7 @@ public class A_TrieTests
     }
 
     /// <summary>
-    /// Creates a <see cref="Trie"/> with 5 test values.
+    /// Creates a <see cref="Trie"/> with 6 test values.
     /// </summary>
     /// <returns>A <see cref="Trie"/></returns>
     public static Trie Create()
@@ -677,7 +679,35 @@ public class E_BenchMarking
 public class F_StructRefactoring
 {
     [TestMethod]
-    public void Create()
+    public void CreateAndValidate()
+    {
+        var trie = Create();
+
+        Assert.IsTrue(trie.NumWords() == 6);
+        Assert.IsTrue(trie.Contains("woo", true));
+
+        var node = trie.GetNode("woord");
+        Assert.IsTrue(node != null && node.Value.IsWord == true);
+        node = trie.GetNode("woorde");
+        Assert.IsTrue(node != null && node.Value.IsWord == false);
+    }
+
+    [TestMethod]
+    public void Removal()
+    {
+        var trie = Create();
+
+        trie.Remove("woo", true);
+        Assert.IsTrue(trie.NumWords() == 4); // two words must have been removed
+        trie.Remove("wapens", false);
+        Assert.IsTrue(trie.NumWords() == 3); // one word must have been been removed
+    }
+
+    /// <summary>
+    /// Creates a <see cref="Trie2"/> with 6 test values.
+    /// </summary>
+    /// <returns>A <see cref="Trie2"/></returns>
+    public static Trie2 Create()
     {
         var trie = new Trie2();
 
@@ -688,6 +718,6 @@ public class F_StructRefactoring
         trie.Add("logos");
         trie.Add("lustoord");
 
-        Assert.IsTrue(1 == 1);
+        return trie;
     }
 }

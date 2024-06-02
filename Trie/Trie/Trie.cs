@@ -82,7 +82,7 @@ public sealed class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <returns>Boolean, <see langword="true"/> if the word exists in the <see cref="Trie"/></returns>
     public bool Contains(string word, bool isPrefix)
     {
-        ArgumentNullException.ThrowIfNullOrEmpty(word, nameof(word));
+        ArgumentException.ThrowIfNullOrEmpty(word, nameof(word));
         var node = Root;
 
         foreach (var c in word)
@@ -217,7 +217,7 @@ public sealed class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <returns>A <see cref="Node"/> representing the given <see cref="string"/>, else <see langword="null"/></returns>
     public Node? GetNode(string prefix)
     {
-        ArgumentNullException.ThrowIfNullOrEmpty(prefix);
+        ArgumentException.ThrowIfNullOrEmpty(prefix);
         return Root.GetNode(prefix);
     }
 
@@ -255,7 +255,7 @@ public sealed class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <param name="isPrefix">If <see langword="true"/>, the word should start with this fragment</param>
     public void Remove(string fragment, bool isPrefix)
     {
-        ArgumentNullException.ThrowIfNullOrEmpty(fragment);
+        ArgumentException.ThrowIfNullOrEmpty(fragment);
         if (isPrefix)
         {
             RemovePrefix(AsStack(fragment, false));
