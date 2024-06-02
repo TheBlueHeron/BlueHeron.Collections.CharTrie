@@ -160,7 +160,7 @@ public sealed class Trie : IEnumerable, IEnumerable<(char, Node)>
     /// <returns>A value if it exists; else <see langword="null"/></returns>
     public double? FindValue(string word)
     {
-        ArgumentNullException.ThrowIfNullOrEmpty(word, nameof(word));
+        ArgumentException.ThrowIfNullOrEmpty(word, nameof(word));
         var node = Root.GetNode(word);
 
         return node?.Value;

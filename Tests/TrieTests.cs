@@ -709,14 +709,15 @@ public class F_StructRefactoring
     /// <returns>A <see cref="Trie2"/></returns>
     public static Trie2 Create()
     {
-        var trie = new Trie2();
-
-        trie.Add("woord");
-        trie.Add("woorden");
-        trie.Add("zijn");
-        trie.Add("wapens");
-        trie.Add("logos");
-        trie.Add("lustoord");
+        var trie = new Trie2
+        {
+            "woord",
+            "woorden",
+            "zijn",
+            "wapens",
+            "logos",
+            "lustoord"
+        };
 
         return trie;
     }
