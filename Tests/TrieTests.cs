@@ -676,7 +676,7 @@ public class E_BenchMarking
 }
 
 [TestClass]
-public class F_StructRefactoring
+public class A_Trie2Tests
 {
     [TestMethod]
     public void CreateAndValidate()
@@ -701,6 +701,60 @@ public class F_StructRefactoring
         Assert.IsTrue(trie.NumWords() == 4); // two words must have been removed
         trie.Remove("wapens", false);
         Assert.IsTrue(trie.NumWords() == 3); // one word must have been been removed
+    }
+
+    [TestMethod]
+    public void Traversal()
+    {
+        var trie = Create();
+        var words = trie.Find(string.Empty, true); // find all
+
+        Assert.IsTrue(words != null && words.ToList().Count == 6);
+
+        words = trie.Find("woord", true);
+        Assert.IsTrue(words != null && words.ToList().Count == 2);
+    }
+
+    [TestMethod]
+    public void Find()
+    {
+        var trie = Create();
+        IEnumerable<string> words;
+
+        words = trie.Find("oo", false); // same as string.Contains("oo")
+        Assert.IsTrue(words.Count() == 3);
+        words = trie.Find("ord", false);
+        Assert.IsTrue(words.Count() == 3);
+    }
+
+    [TestMethod]
+    public void Serialization()
+    {
+        var trie = Create();
+        var json = JsonSerializer.Serialize(trie);
+
+        Assert.IsTrue(!string.IsNullOrEmpty(json));
+        var reconstituted = JsonSerializer.Deserialize<Trie2>(json);
+        Assert.IsTrue(reconstituted != null && reconstituted.NumWords() == trie.NumWords());
+        Assert.IsTrue(reconstituted.Find("w", true).ToList().Count == 3);
+    }
+
+    [TestMethod]
+    public async Task ImportExport()
+    {
+        var trie = await Trie2.ImportAsync(new FileInfo("dictionaries\\nl.dic"));
+
+        Assert.IsTrue(trie != null && trie.NumWords() == 374616); // 622!!
+
+        Assert.IsTrue(await trie.ExportAsync("dictionaries\\nl.json"));
+    }
+
+    [TestMethod]
+    public async Task Load()
+    {
+        var trie = await Trie2.LoadAsync(new FileInfo("dictionaries\\nl.json"));
+
+        Assert.IsTrue(trie != null && trie.NumWords() == 374616); // 616!!
     }
 
     /// <summary>
