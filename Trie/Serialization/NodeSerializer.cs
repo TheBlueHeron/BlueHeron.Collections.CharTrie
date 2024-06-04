@@ -4,14 +4,15 @@ using System.Text.Json.Serialization;
 namespace BlueHeron.Collections.Trie.Serialization;
 
 /// <summary>
-/// A <see cref="JsonConverter{Node}"/> that minimizes output.
+/// A <see cref="JsonConverter{Trie.Node}"/> that minimizes output.
 /// The node will be serialized with an extra field, containing the number of children.
 /// </summary>
-internal sealed class NodeSerializer : JsonConverter<Node>
+internal sealed class NodeSerializer : JsonConverter<Trie.Node>
 {
     #region Fields
 
     private const string _C = "c"; // NumChildren
+    private const string _K = "k"; // Character
     private const string _R = "r"; // RemainingDepth
     private const string _V = "v"; // Value
     private const string _W = "w"; // IsWord
@@ -21,30 +22,31 @@ internal sealed class NodeSerializer : JsonConverter<Node>
     #region Overrides
 
     /// <inheritdoc/>
-    public override Node? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override Trie.Node Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         throw new NotImplementedException();
     }
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, Node value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, Trie.Node value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
+        writer.WriteString(_K, value.Character.ToString());
         if (value.IsWord)
         {
             writer.WriteNumber(_W, 1);
         }
-        if (value.Children.Count > 0)
+        if (value.Children.Length > 0)
         {
-            writer.WriteNumber(_C, value.Children.Count);
+            writer.WriteNumber(_C, value.Children.Length);
         }
         if (value.RemainingDepth > 0)
         {
             writer.WriteNumber(_R, value.RemainingDepth);
         }
-        if (value.Value != null)
+        if (!string.IsNullOrEmpty(value.Value))
         {
-            writer.WriteNumber(_V, value.Value.Value);
+            writer.WriteString(_V, value.Value);
         }
         writer.WriteEndObject();
     }

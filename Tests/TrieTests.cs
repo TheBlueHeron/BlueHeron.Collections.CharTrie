@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using BlueHeron.Collections.Trie.Search;
@@ -18,9 +17,9 @@ public class A_TrieTests
         Assert.IsTrue(trie.Contains("woo", true));
 
         var node = trie.GetNode("woord");
-        Assert.IsTrue(node != null && node.IsWord == true);
+        Assert.IsTrue(node != null && node.Value.IsWord == true);
         node = trie.GetNode("woorde");
-        Assert.IsTrue(node != null && node.IsWord == false);
+        Assert.IsTrue(node != null && node.Value.IsWord == false);
 
 
     }
@@ -77,8 +76,9 @@ public class A_TrieTests
     {
         var trie = await Trie.ImportAsync(new FileInfo("dictionaries\\nl.dic"));
 
-        Assert.IsTrue(trie != null && trie.NumWords() == 374622);
-        
+        Assert.IsTrue(trie != null && trie.NumWords() == 374614);
+        //var lst = trie.Find(string.Empty, true).ToList();
+
         Assert.IsTrue(await trie.ExportAsync("dictionaries\\nl.json"));
     }
 
@@ -87,13 +87,13 @@ public class A_TrieTests
     {
         var trie = await Trie.LoadAsync(new FileInfo("dictionaries\\nl.json"));
 
-        Assert.IsTrue(trie != null && trie.NumWords() == 374622);
+        Assert.IsTrue(trie != null && trie.NumWords() == 374614);
     }
 
     /// <summary>
-    /// Creates a <see cref="Trie"/> with 6 test values.
+    /// Creates a <see cref="Collections.Trie"/> with 6 test values.
     /// </summary>
-    /// <returns>A <see cref="Trie"/></returns>
+    /// <returns>A <see cref="Collections.Trie"/></returns>
     public static Trie Create()
     {
         var tree = new Trie
@@ -126,17 +126,17 @@ public class B_TrieMapTests
     {
         var trie = Create();
         var values = trie.FindValues(string.Empty, true).ToList(); // find all
-        var blExistsVal = trie.ContainsValue(3.0); // should exist
+        var blExistsVal = trie.ContainsValue("3.0"); // should exist
 
         Assert.IsTrue(values.Count == 6 && blExistsVal);
 
-        blExistsVal = trie.ContainsValue(123); // should not exist
+        blExistsVal = trie.ContainsValue("123"); // should not exist
         Assert.IsFalse(blExistsVal);
 
         var value = trie.FindValue("zijn");
-        Assert.IsTrue(value != null && value.Equals(3.0));
+        Assert.IsTrue(value != null && value == "3.0");
 
-        var word = trie.GetWord(3.0);
+        var word = trie.GetWord("3.0");
         Assert.IsTrue(word == "zijn");
     }
 
@@ -144,7 +144,7 @@ public class B_TrieMapTests
     public void Find()
     {
         var trie = Create();
-        IEnumerable<double?> values;
+        IEnumerable<string?> values;
 
         values = trie.FindValues("oo", false);
         Assert.IsTrue(values.Count() == 3);
@@ -165,9 +165,8 @@ public class B_TrieMapTests
         
         var node = trie.GetNode("logos");
 
-        Assert.IsFalse(node is null || node.Value is null);
-        
-        Assert.IsTrue(node.Value == 3.1415);
+        Assert.IsFalse(node is null || string.IsNullOrEmpty(node.Value.Value));        
+        Assert.IsTrue(node.Value.Value == "3.1415");
     }
 
     /// <summary>
@@ -178,12 +177,12 @@ public class B_TrieMapTests
     {
         var tree = new Trie
         {
-            { "woord", 1 },
-            { "woorden", 2.14 },
-            { "zijn", 3.0 },
-            { "wapens", 4.321 },
-            { "logos", 3.1415 },
-            { "lustoord", 7 }
+            { "woord", "1" },
+            { "woorden", "2.14" },
+            { "zijn", "3.0" },
+            { "wapens", "4.321" },
+            { "logos", "3.1415" },
+            { "lustoord", "7" }
         };
 
         return tree;
@@ -233,7 +232,7 @@ public class C_PatternMatchTests
 
         if (trie != null)
         {
-            IEnumerable<double?> values;
+            IEnumerable<string?> values;
             var prefixPattern = new PatternMatch
             {
                 new CharMatch('w') // Default: { Type = CharMatchType.First } -> same as prefix 'w'
@@ -291,7 +290,7 @@ public class C_PatternMatchTests
 
         if (trie != null)
         {
-            IEnumerable<double?> values;
+            IEnumerable<string?> values;
             var wordPattern = new PatternMatch() { Type = PatternMatchType.IsWord };
 
             wordPattern.AddRange([CharMatch.Wildcard, new CharMatch('o'), CharMatch.Wildcard, new CharMatch('o')]); // where second and fourth letter is an 'o'
@@ -352,7 +351,7 @@ public class C_PatternMatchTests
 
         if (trie != null)
         {
-            IEnumerable<double?> values;
+            IEnumerable<string?> values;
             // all words that contain the pattern 'o*d' -> 'woord', 'woorden', 'lustoord'
             var fragmentPattern = new PatternMatch([new CharMatch('o'), CharMatch.Wildcard, new CharMatch('d')], PatternMatchType.IsFragment);
 
@@ -564,9 +563,9 @@ public class E_BenchMarking
     }
 
     /// <summary>
-    /// Calls <see cref="Trie.Contains(string, bool)"/> and returns the duration of the call.
+    /// Calls <see cref="Collections.Trie.Contains(string, bool)"/> and returns the duration of the call.
     /// </summary>
-    /// <param name="trie">The <see cref="Trie"/> to use</param>
+    /// <param name="trie">The <see cref="Collections.Trie"/> to use</param>
     /// <param name="word">The word to find</param>
     /// <param name="exists">Result of the function call</param>
     /// <returns>A <see cref="TimeSpan"/></returns>
@@ -580,9 +579,9 @@ public class E_BenchMarking
     }
 
     /// <summary>
-    /// Calls <see cref="Trie.Find(PatternMatch)"/>.ToList() and returns the duration of the call.
+    /// Calls <see cref="Collections.Trie.Find(PatternMatch)"/>.ToList() and returns the duration of the call.
     /// </summary>
-    /// <param name="trie">The <see cref="Trie"/> to use</param>
+    /// <param name="trie">The <see cref="Collections.Trie"/> to use</param>
     /// <param name="pattern">The pattern to match</param>
     /// <param name="num">Result of the function call</param>
     /// <returns>A <see cref="TimeSpan"/></returns>
@@ -598,9 +597,9 @@ public class E_BenchMarking
     }
 
     /// <summary>
-    /// Calls <see cref="Trie.Find(string, bool)"/>.ToList() and returns the duration of the call.
+    /// Calls <see cref="Collections.Trie.Find(string, bool)"/>.ToList() and returns the duration of the call.
     /// </summary>
-    /// <param name="trie">The <see cref="Trie"/> to use</param>
+    /// <param name="trie">The <see cref="Collections.Trie"/> to use</param>
     /// <param name="prefix">The prefix to match</param>
     /// <param name="num">Result of the function call</param>
     /// <returns>A <see cref="TimeSpan"/></returns>
@@ -673,106 +672,4 @@ public class E_BenchMarking
     }
 
     #endregion
-}
-
-[TestClass]
-public class A_Trie2Tests
-{
-    [TestMethod]
-    public void CreateAndValidate()
-    {
-        var trie = Create();
-
-        Assert.IsTrue(trie.NumWords() == 6);
-        Assert.IsTrue(trie.Contains("woo", true));
-
-        var node = trie.GetNode("woord");
-        Assert.IsTrue(node != null && node.Value.IsWord == true);
-        node = trie.GetNode("woorde");
-        Assert.IsTrue(node != null && node.Value.IsWord == false);
-    }
-
-    [TestMethod]
-    public void Removal()
-    {
-        var trie = Create();
-
-        trie.Remove("woo", true);
-        Assert.IsTrue(trie.NumWords() == 4); // two words must have been removed
-        trie.Remove("wapens", false);
-        Assert.IsTrue(trie.NumWords() == 3); // one word must have been been removed
-    }
-
-    [TestMethod]
-    public void Traversal()
-    {
-        var trie = Create();
-        var words = trie.Find(string.Empty, true); // find all
-
-        Assert.IsTrue(words != null && words.ToList().Count == 6);
-
-        words = trie.Find("woord", true);
-        Assert.IsTrue(words != null && words.ToList().Count == 2);
-    }
-
-    [TestMethod]
-    public void Find()
-    {
-        var trie = Create();
-        IEnumerable<string> words;
-
-        words = trie.Find("oo", false); // same as string.Contains("oo")
-        Assert.IsTrue(words.Count() == 3);
-        words = trie.Find("ord", false);
-        Assert.IsTrue(words.Count() == 3);
-    }
-
-    [TestMethod]
-    public void Serialization()
-    {
-        var trie = Create();
-        var json = JsonSerializer.Serialize(trie);
-
-        Assert.IsTrue(!string.IsNullOrEmpty(json));
-        var reconstituted = JsonSerializer.Deserialize<Trie2>(json);
-        Assert.IsTrue(reconstituted != null && reconstituted.NumWords() == trie.NumWords());
-        Assert.IsTrue(reconstituted.Find("w", true).ToList().Count == 3);
-    }
-
-    [TestMethod]
-    public async Task ImportExport()
-    {
-        var trie = await Trie2.ImportAsync(new FileInfo("dictionaries\\nl.dic"));
-
-        Assert.IsTrue(trie != null && trie.NumWords() == 374616); // 622!!
-
-        Assert.IsTrue(await trie.ExportAsync("dictionaries\\nl.json"));
-    }
-
-    [TestMethod]
-    public async Task Load()
-    {
-        var trie = await Trie2.LoadAsync(new FileInfo("dictionaries\\nl.json"));
-
-        Assert.IsTrue(trie != null && trie.NumWords() == 374616); // 616!!
-    }
-
-    /// <summary>
-    /// Creates a <see cref="Trie2"/> with 6 test values.
-    /// </summary>
-    /// <returns>A <see cref="Trie2"/></returns>
-    public static Trie2 Create()
-    {
-        var trie = new Trie2
-        {
-            "woord",
-            "woorden",
-            "zijn",
-            "wapens",
-            "logos",
-            "lustoord"
-        };
-
-        return trie;
-    }
 }

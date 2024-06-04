@@ -4,13 +4,14 @@ using System.Text.Json.Serialization;
 namespace BlueHeron.Collections.Trie.Serialization;
 
 /// <summary>
-/// A <see cref="JsonConverter{DeserializedNode}"/>.
+/// A <see cref="JsonConverter{NodeWrapper}"/>.
 /// </summary>
-internal sealed class NodeDeserializer : JsonConverter<DeserializedNode>
+internal sealed class NodeDeserializer : JsonConverter<NodeWrapper>
 {
     #region Fields
 
     private const string _C = "c"; // NumChildren
+    private const string _K = "k"; // Character
     private const string _R = "r"; // RemainingDepth
     private const string _V = "v"; // Value
     private const string _W = "w"; // IsWord
@@ -20,9 +21,10 @@ internal sealed class NodeDeserializer : JsonConverter<DeserializedNode>
     #region Overrides
 
     /// <inheritdoc/>
-    public override DeserializedNode? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override NodeWrapper Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var node = new DeserializedNode();
+        var numChildren = 0;
+        var node  = new Trie.Node();
 
         while (reader.Read())
         {
@@ -32,9 +34,18 @@ internal sealed class NodeDeserializer : JsonConverter<DeserializedNode>
                     var propertyName = reader.GetString();
                     switch (propertyName)
                     {
+
+                        case _K:
+                            reader.Read();
+                            var sc = reader.GetString();
+                            if (!string.IsNullOrEmpty(sc))
+                            {
+                                node.Character = sc[0];
+                            }
+                            break;
                         case _C:
                             reader.Read();
-                            node.NumChildren = reader.GetInt32();
+                            numChildren = reader.GetInt32();
                             break;
                         case _R:
                             reader.Read();
@@ -46,19 +57,19 @@ internal sealed class NodeDeserializer : JsonConverter<DeserializedNode>
                             break;
                         case _V:
                             reader.Read();
-                            node.Value = reader.GetDouble();
+                            node.Value = reader.GetString();
                             break;
                     }
                     break;
                 case JsonTokenType.EndObject: // EndObject of node
-                    return node;
+                    return new NodeWrapper(node) { NumChildren = numChildren };
             }
         }
         throw new InvalidCastException(); // this should not happen
     }
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, DeserializedNode value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, NodeWrapper value, JsonSerializerOptions options)
     {
         throw new NotImplementedException();
     }

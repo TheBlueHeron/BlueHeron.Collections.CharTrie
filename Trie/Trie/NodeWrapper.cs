@@ -5,11 +5,11 @@ using System.Text.Json.Serialization;
 namespace BlueHeron.Collections.Trie;
 
 /// <summary>
-/// Wrapper for a <see cref="Trie2.Node"/>.
+/// Wrapper for a <see cref="Trie.Node"/>.
 /// </summary>
-/// <param name="node">The <see cref="Trie2.Node"/></param>
-[JsonConverter(typeof(NodeDeserializer2))]
-internal class NodeWrapper(Trie2.Node node)
+/// <param name="node">The <see cref="Trie.Node"/></param>
+[JsonConverter(typeof(NodeDeserializer))]
+internal class NodeWrapper(Trie.Node node)
 {
     #region Objects and variables
 
@@ -20,12 +20,12 @@ internal class NodeWrapper(Trie2.Node node)
     #region Properties
 
     /// <summary>
-    /// Gets or sets the wrapped <see cref="Trie2.Node"/>.
+    /// Gets or sets the wrapped <see cref="Trie.Node"/>.
     /// </summary>
-    public Trie2.Node Node = node;
+    public Trie.Node Node = node;
 
     /// <summary>
-    /// The expected number of <see cref="Trie2.Node"/>s in the <see cref="Trie2.Node.Children"/> collection.
+    /// The expected number of <see cref="Trie.Node"/>s in the <see cref="Trie.Node.Children"/> collection.
     /// </summary>
     public int NumChildren
     {

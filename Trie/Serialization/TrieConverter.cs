@@ -14,80 +14,15 @@ internal sealed class TrieConverter : JsonConverter<Trie>
 
     #endregion
 
-    #region Private methods and functions
-
-    /// <summary>
-    /// Reconstitutes the <see cref="Trie"/> recursively while reading successive nodes from the serialized array.
-    /// </summary>
-    /// <param name="reader">The <see cref="Utf8JsonReader"/> that contains the data</param>
-    /// <param name="parentNode">The current parent <see cref="Node"/>. If null: root node is being read</param>
-    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
-    /// <returns>A <see cref="Node"/></returns>
-    /// <exception cref="InvalidCastException">Unexpected content in json</exception>
-    private static Node? ParseNode(ref Utf8JsonReader reader, Node? parentNode, JsonSerializerOptions options)
-    {
-        while (reader.Read())
-        {
-            switch (reader.TokenType)
-            {
-                case JsonTokenType.PropertyName:
-                    if (reader.GetString() is string key)
-                    {
-                        var c = key[0];
-                        DeserializedNode? node;
-
-                        reader.Read(); // -> StartObject ( = node)
-                        using var doc = JsonDocument.ParseValue(ref reader);
-                        node = JsonSerializer.Deserialize<DeserializedNode>(doc.RootElement, options);
-                        if (node != null)
-                        {
-                            //node.mChildren= new HashSet<(char, Node)>(node.NumChildren); // This increaes memory usage instead of decreasing it!
-                            if (parentNode == null) // current node is root node
-                            {
-                                while (node.NumChildren > node.Children.Count)  // next node is child of current node
-                                {
-                                    ParseNode(ref reader, node, options);
-                                }
-                                var root = new Node() { IsWord = node.IsWord, RemainingDepth = node.RemainingDepth, Value = node.Value };  // loose NumChildren field
-
-                                foreach (var item in node.Children)
-                                {
-                                    root.Children.Add(item);
-                                }
-
-                                return root; // end point of recursion
-                            }
-                            else // current node is child of parent node
-                            {
-                                var child = new Node { IsWord = node.IsWord, RemainingDepth = node.RemainingDepth, Value = node.Value };  // loose NumChildren field
-
-                                parentNode.Children.Add((c, child));
-                                while (node.NumChildren > node.Children.Count) // next node is child of current node
-                                {
-                                    ParseNode(ref reader, child, options);
-                                    node.NumChildren--;
-                                }
-                                return null; // back up the tree
-                            }
-                        }
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-        throw new InvalidCastException(); // should not happen
-    }
-
-    #endregion
-
     #region Overrides
 
     /// <inheritdoc/>
     public override Trie? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var trie = new Trie();
-
+        List<NodeWrapper> nodes = [];
+        var curIndex = 0;
+        
         while (reader.Read())
         {
             switch (reader.TokenType)
@@ -101,12 +36,14 @@ internal sealed class TrieConverter : JsonConverter<Trie>
                             {
                                 switch (reader.TokenType)
                                 {
-                                    case JsonTokenType.StartArray:
-                                        var root = ParseNode(ref reader, null, options); // deserialize node array into a node hierarchy starting with a root node
-
-                                        if (root != null)
+                                    case JsonTokenType.StartObject:
+                                        using (var doc = JsonDocument.ParseValue(ref reader))
                                         {
-                                            trie.RootNode = root;
+                                            var node = JsonSerializer.Deserialize<NodeWrapper>(doc.RootElement, options);
+                                            if (node != null)
+                                            {
+                                                nodes.Add(node);
+                                            }
                                         }
                                         break;
                                     default:
@@ -120,7 +57,32 @@ internal sealed class TrieConverter : JsonConverter<Trie>
                     break;
             }
         }
+        if (nodes.Count > 0)
+        {
+            var rootWrapper = nodes[0];
+            var root = rootWrapper.Node;
+            if (rootWrapper.NumChildren > 0) // reconstitute the hierarchy
+            {
+                AddChildren(ref root, ref nodes, ref curIndex, nodes[0].NumChildren);
+            }
+            trie.RootNode = root;
+        }
         return trie;
+    }
+
+    private static void AddChildren(ref Trie.Node parent, ref List<NodeWrapper> nodes, ref int curIndex, int numChildren)
+    {
+        parent.Children = new Trie.Node[numChildren];
+        for (var i = 0; i < numChildren; i++)
+        {
+            curIndex++;
+            var nodeWrapper = nodes[curIndex];
+            parent.Children[i] = nodeWrapper.Node;
+            if (nodeWrapper.NumChildren > 0)
+            {
+                AddChildren(ref parent.Children[i], ref nodes, ref curIndex, nodeWrapper.NumChildren);
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -129,12 +91,9 @@ internal sealed class TrieConverter : JsonConverter<Trie>
         writer.WriteStartObject();
         writer.WritePropertyName(_N);
         writer.WriteStartArray();
-        foreach (var item in value.AsEnumerable()) // serialize Trie nodes as an array of nodes
+        foreach (var node in value.AsEnumerable()) // serialize Trie nodes as a flat array of nodes (large hierarchies cause memory problems in the JsonSerializer when deserializing)
         {
-            writer.WriteStartObject();
-            writer.WritePropertyName($"{item.Item1}");
-            writer.WriteRawValue(JsonSerializer.Serialize(item.Item2));
-            writer.WriteEndObject();
+            writer.WriteRawValue(JsonSerializer.Serialize(node));
         }
         writer.WriteEndArray();
         writer.WriteEndObject();
