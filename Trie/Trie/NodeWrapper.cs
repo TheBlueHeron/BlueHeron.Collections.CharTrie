@@ -1,11 +1,10 @@
-﻿
-using BlueHeron.Collections.Trie.Serialization;
+﻿using BlueHeron.Collections.Trie.Serialization;
 using System.Text.Json.Serialization;
 
 namespace BlueHeron.Collections.Trie;
 
 /// <summary>
-/// Wrapper for a <see cref="Trie.Node"/>.
+/// Wrapper for a <see cref="Trie.Node"/> that is used in deserialization and <see cref="Search.PatternMatchType.IsFragment"/> searches.
 /// </summary>
 /// <param name="node">The <see cref="Trie.Node"/></param>
 [JsonConverter(typeof(NodeDeserializer))]
@@ -25,7 +24,7 @@ internal class NodeWrapper(Trie.Node node)
     public Trie.Node Node = node;
 
     /// <summary>
-    /// The expected number of <see cref="Trie.Node"/>s in the <see cref="Trie.Node.Children"/> collection.
+    /// Gets the expected number of <see cref="Trie.Node"/>s in the <see cref="Node"/>'s <see cref="Trie.Node.Children"/> array.
     /// </summary>
     public int NumChildren
     {

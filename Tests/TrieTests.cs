@@ -493,7 +493,7 @@ public class E_BenchMarking
                 bmListPattern.AddResult(TestListContainsPattern(lstWords, pattern, ref numList));
                 bmTriePattern.AddResult(TestTrieContainsPattern(trie, pattern, ref numTrie));
 
-                Assert.IsTrue(numList <= numTrie); // tegridy check
+                Assert.IsTrue(numList == numTrie); // tegridy check
             }
 
             // output speed benchmark results

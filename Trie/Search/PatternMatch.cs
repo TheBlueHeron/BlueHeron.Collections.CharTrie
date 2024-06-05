@@ -8,6 +8,12 @@ namespace BlueHeron.Collections.Trie.Search;
 [DebuggerStepThrough()]
 public class PatternMatch : List<CharMatch>
 {
+    #region Objects and variables
+
+    internal const string _DOTSTAR = ".*";
+
+    #endregion
+
     #region Properties
 
     /// <summary>
@@ -59,7 +65,7 @@ public class PatternMatch : List<CharMatch>
     }
 
     /// <summary>
-    /// Creates a <see cref="PatternMatch"/> representing the given fragment.
+    /// Creates a <see cref="PatternMatch"/> of type <see cref="PatternMatchType.IsFragment"/> representing the given fragment.
     /// </summary>
     /// <param name="fragment">The fragment</param>
     /// <returns>A <see cref="PatternMatch"/></returns>
@@ -69,7 +75,7 @@ public class PatternMatch : List<CharMatch>
     }
 
     /// <summary>
-    /// Creates a <see cref="PatternMatch"/> representing the given prefix.
+    /// Creates a <see cref="PatternMatch"/> of type <see cref="PatternMatchType.IsPrefix"/> representing the given prefix.
     /// </summary>
     /// <param name="prefix">The prefix</param>
     /// <returns>A <see cref="PatternMatch"/></returns>
@@ -79,13 +85,33 @@ public class PatternMatch : List<CharMatch>
     }
 
     /// <summary>
-    /// Creates a <see cref="PatternMatch"/> representing the given word.
+    /// Creates a <see cref="PatternMatch"/> of type <see cref="PatternMatchType.IsWord"/> representing the given word.
     /// </summary>
     /// <param name="word">The word</param>
     /// <returns>A <see cref="PatternMatch"/></returns>
     public static PatternMatch FromWord(string word)
     {
         return new PatternMatch(word.ToCharMatchArray(), PatternMatchType.IsWord);
+    }
+
+    /// <summary>
+    /// Overridden to return this <see cref="PatternMatch"/> as a regex expression.
+    /// </summary>
+    /// <returns>A regex expression</returns>
+    public override string ToString()
+    {
+        if (Count == 0)
+        {
+            return string.Empty;
+        }
+        var strRegex = string.Join(string.Empty, this.Select(c => c.ToString()));
+
+        return Type switch
+        {
+            PatternMatchType.IsWord => strRegex,
+            PatternMatchType.IsFragment => _DOTSTAR + strRegex + _DOTSTAR,
+            _ => strRegex + _DOTSTAR // prefix
+        };
     }
 
     #endregion

@@ -70,6 +70,13 @@ internal sealed class TrieConverter : JsonConverter<Trie>
         return trie;
     }
 
+    /// <summary>
+    /// Adds the appropriate (<paramref name="numChildren"/>) number of children from the given <paramref name="nodes"/> to <paramref name="parent"/>'s children array.
+    /// </summary>
+    /// <param name="parent">The current <see cref="Trie.Node"/></param>
+    /// <param name="nodes">The deserialized <see cref="NodeWrapper"/>s</param>
+    /// <param name="curIndex">The current index in the <paramref name="nodes"/> list</param>
+    /// <param name="numChildren">The number of nodes to add to <paramref name="parent"/></param>
     private static void AddChildren(ref Trie.Node parent, ref List<NodeWrapper> nodes, ref int curIndex, int numChildren)
     {
         parent.Children = new Trie.Node[numChildren];

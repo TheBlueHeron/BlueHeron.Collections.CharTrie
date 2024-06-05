@@ -7,11 +7,13 @@ namespace BlueHeron.Collections.Trie.Search;
 /// <summary>
 /// Container for details on matching a character in a <see cref="PatternMatch"/>.
 /// </summary>
-[DebuggerDisplay("{Primary} ({Alternatives})")]
 [DebuggerStepThrough()]
 public class CharMatch
 {
     #region Objects and variables
+
+    internal const string _DOT = ".";
+    internal const string _PIPE = "|";
 
     private readonly bool mCheckAlternatives;
     private static readonly CharMatch mWildCard = new(null, null);
@@ -22,19 +24,20 @@ public class CharMatch
 
     /// <summary>
     /// Gets an array of characters to match if the <see cref="Primary"/> character was not matched.
+    /// Is ignored when <see cref="Primary"/> is <see langword="null"/>.
     /// </summary>
     [JsonPropertyName("a")]
     public char[]? Alternatives { get; }
 
     /// <summary>
     /// Gets the character for which to find a match first.
-    /// If <see langword="null"/>, this <see cref="CharMatch"/> functions as a wildcard (and <see cref="Alternatives"/>`are ignored).
+    /// If <see langword="null"/>, this <see cref="CharMatch"/> functions as a wildcard (and <see cref="Alternatives"/> are ignored).
     /// </summary>
     [JsonPropertyName("p")]
     public char? Primary { get; }
 
     /// <summary>
-    /// Gets a <see cref="CharMatch"/> that always is a match.
+    /// Gets a <see cref="CharMatch"/> that matches any character.
     /// </summary>
     [JsonIgnore()]
     public static CharMatch Wildcard => mWildCard;
@@ -46,7 +49,7 @@ public class CharMatch
     /// <summary>
     /// Creates a new <see cref="CharMatch"/>.
     /// </summary>
-    /// <param name="primary">The primary for which to find a match first</param>
+    /// <param name="primary">The primary character for which to find a match</param>
     public CharMatch(char? primary)
     {
         Primary = primary;
@@ -55,9 +58,8 @@ public class CharMatch
     /// <summary>
     /// Creates a new <see cref="CharMatch"/>.
     /// </summary>
-    /// <param name="primary">The primary for which to find a match first</param>
-    /// <param name="alternatives">Optional array of characters to match if the primary primary was not matched</param>
-    /// <param name="type">A <see cref="CharMatchType"/> determining the way to match characters</param>
+    /// <param name="primary">The primary character for which to find a match first</param>
+    /// <param name="alternatives">Optional array of characters to match if the primary character was not matched</param>
     [JsonConstructor()]
     public CharMatch(char? primary, char[]? alternatives)
     {
@@ -88,15 +90,34 @@ public class CharMatch
         }
         if (mCheckAlternatives)
         {
-            for (var i = 0; i < Alternatives?.Length; i++)
+#nullable disable
+            for (var i = 0; i < Alternatives.Length; i++)
             {
                 if (Alternatives[i] == character)
                 {
                     return true;
                 }
             }
+#nullable enable
         }
         return false;
+    }
+
+    /// <summary>
+    /// Overridden to return this <see cref="CharMatch"/> as a regex string.
+    /// </summary>
+    /// <returns>A regex expression</returns>
+    public override string ToString()
+    {
+        if (Primary == null)
+        {
+            return _DOT;
+        }
+        if (Alternatives == null)
+        {
+            return $"{Primary}";
+        }
+        return $"[{string.Join(_PIPE, Primary, Alternatives)}]";
     }
 
     #endregion

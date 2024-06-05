@@ -2,7 +2,7 @@
 namespace BlueHeron.Collections.Trie.Search;
 
 /// <summary>
-/// Enumeration of possible ways to match a word with the <see cref="PatternMatch"/>.
+/// Enumeration of possible ways to match a word using a <see cref="PatternMatch"/>.
 /// </summary>
 public enum PatternMatchType
 {
