@@ -16,12 +16,10 @@ public class A_TrieTests
         Assert.IsTrue(trie.NumWords() == 6);
         Assert.IsTrue(trie.Contains("woo", true));
 
-        var node = trie.GetNode("woord");
-        Assert.IsTrue(node != null && node.Value.IsWord == true);
-        node = trie.GetNode("woorde");
-        Assert.IsTrue(node != null && node.Value.IsWord == false);
-
-
+        var nodeRef = trie.GetNode("woord");
+        Assert.IsTrue(nodeRef.HasNode && nodeRef.Node.IsWord == true);
+        nodeRef = trie.GetNode("woorde");
+        Assert.IsTrue(nodeRef.HasNode && nodeRef.Node.IsWord == false);
     }
 
     [TestMethod]
@@ -163,10 +161,9 @@ public class B_TrieMapTests
         Assert.IsTrue(reconstituted != null && reconstituted.NumWords() == trie.NumWords());
         Assert.IsTrue(reconstituted.Find("w", true).ToList().Count == 3);
         
-        var node = trie.GetNode("logos");
+        var nodeRef = trie.GetNode("logos");
 
-        Assert.IsFalse(node is null || string.IsNullOrEmpty(node.Value.Value));        
-        Assert.IsTrue(node.Value.Value == "3.1415");
+        Assert.IsTrue(nodeRef.HasNode && nodeRef.Node.Value == "3.1415");
     }
 
     /// <summary>
@@ -430,6 +427,7 @@ public class E_BenchMarking
         GC.GetTotalMemory(true);
         var startMemory = GC.GetTotalAllocatedBytes(true);
         var trie = await Trie.LoadAsync(new FileInfo("dictionaries\\nl.json")); // create trie from export created earlier
+        GC.GetTotalMemory(true);
         var trieMem = GC.GetTotalAllocatedBytes(true) - startMemory;
 
         if (trie != null)
@@ -448,6 +446,7 @@ public class E_BenchMarking
                     lstWords.Add(line);
                 }
             }
+            GC.GetTotalMemory(true);
             var listMem = GC.GetTotalAllocatedBytes(true) - startMemory;
 
             // output memory benchmark results
@@ -589,7 +588,7 @@ public class E_BenchMarking
     {
         var start = DateTime.Now;
         var match = new PatternMatch(pattern, PatternMatchType.IsFragment);
-        var lst = trie.Find(match).ToList();
+        var lst = trie.Find(match).Distinct().ToList(); // TODO: if the pattern occurs twice in a word, it is returned twice! (revealing that nodes are still visited multple times and there is a performance gain to be had)
 
         num = lst.Count;
 

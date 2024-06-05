@@ -4,9 +4,9 @@ using System.Text.Json.Serialization;
 namespace BlueHeron.Collections.Trie.Serialization;
 
 /// <summary>
-/// A <see cref="JsonConverter{NodeWrapper}"/>.
+/// A <see cref="JsonConverter{Trie.DeserializedNode}"/>.
 /// </summary>
-internal sealed class NodeDeserializer : JsonConverter<NodeWrapper>
+internal sealed class NodeDeserializer : JsonConverter<Trie.DeserializedNode>
 {
     #region Fields
 
@@ -21,7 +21,7 @@ internal sealed class NodeDeserializer : JsonConverter<NodeWrapper>
     #region Overrides
 
     /// <inheritdoc/>
-    public override NodeWrapper Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override Trie.DeserializedNode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var numChildren = 0;
         var node  = new Trie.Node();
@@ -62,14 +62,14 @@ internal sealed class NodeDeserializer : JsonConverter<NodeWrapper>
                     }
                     break;
                 case JsonTokenType.EndObject: // EndObject of node
-                    return new NodeWrapper(node) { NumChildren = numChildren };
+                    return new Trie.DeserializedNode(node) { NumChildren = numChildren };
             }
         }
         throw new InvalidCastException(); // this should not happen
     }
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, NodeWrapper value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, Trie.DeserializedNode value, JsonSerializerOptions options)
     {
         throw new NotImplementedException();
     }

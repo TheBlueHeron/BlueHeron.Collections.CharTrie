@@ -20,7 +20,7 @@ internal sealed class TrieConverter : JsonConverter<Trie>
     public override Trie? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var trie = new Trie();
-        List<NodeWrapper> nodes = [];
+        List<Trie.DeserializedNode> nodes = [];
         var curIndex = 0;
         
         while (reader.Read())
@@ -39,7 +39,7 @@ internal sealed class TrieConverter : JsonConverter<Trie>
                                     case JsonTokenType.StartObject:
                                         using (var doc = JsonDocument.ParseValue(ref reader))
                                         {
-                                            var node = JsonSerializer.Deserialize<NodeWrapper>(doc.RootElement, options);
+                                            var node = JsonSerializer.Deserialize<Trie.DeserializedNode>(doc.RootElement, options);
                                             if (node != null)
                                             {
                                                 nodes.Add(node);
@@ -74,10 +74,10 @@ internal sealed class TrieConverter : JsonConverter<Trie>
     /// Adds the appropriate (<paramref name="numChildren"/>) number of children from the given <paramref name="nodes"/> to <paramref name="parent"/>'s children array.
     /// </summary>
     /// <param name="parent">The current <see cref="Trie.Node"/></param>
-    /// <param name="nodes">The deserialized <see cref="NodeWrapper"/>s</param>
+    /// <param name="nodes">The deserialized <see cref="Trie.DeserializedNode"/>s</param>
     /// <param name="curIndex">The current index in the <paramref name="nodes"/> list</param>
     /// <param name="numChildren">The number of nodes to add to <paramref name="parent"/></param>
-    private static void AddChildren(ref Trie.Node parent, ref List<NodeWrapper> nodes, ref int curIndex, int numChildren)
+    private static void AddChildren(ref Trie.Node parent, ref List<Trie.DeserializedNode> nodes, ref int curIndex, int numChildren)
     {
         parent.Children = new Trie.Node[numChildren];
         for (var i = 0; i < numChildren; i++)
