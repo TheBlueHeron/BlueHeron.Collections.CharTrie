@@ -3,7 +3,6 @@
 ## TODO
 
 1. Refactor Node.Character to Node.Characters char array to compress branches with one child into a single node (cf. a HAT-Trie)
-2. Fix issue where a word that contains the needed pattern multiple times is returned multiple times.
 
 ## Nodes as class
 
@@ -74,5 +73,5 @@
 |    Trie Find(prefix) |     10 |           113,1 |          3256,0 |          1124,6 |         1355,0 | <!-- OK
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |           List Regex |      3 |         75624,7 |        102018,2 |         91202,3 |        95964,0 |
-|   Trie Find(pattern) |      3 |         60130,0 |         63259,4 |         61916,3 |        62359,4 | <!-- OK, but see TODO 2
+|   Trie Find(pattern) |      3 |         60130,0 |         63259,4 |         61916,3 |        62359,4 | <!-- OK
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|

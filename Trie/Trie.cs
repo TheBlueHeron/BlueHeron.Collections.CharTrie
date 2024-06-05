@@ -80,13 +80,9 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
         #region Construction
 
         /// <summary>
-        /// Creates a new, empty <see cref="Node"/>.
+        /// Creates a new node without a <see cref="Character"/> and an empty <see cref="Children"/> array.
         /// </summary>
-        public Node()
-        {
-            Children = [];
-            mRemainingDepth = -1;
-        }
+        public Node() { Children = []; RemainingDepth = -1; }
 
         /// <summary>
         /// Creates a new <see cref="Node"/>.
@@ -94,7 +90,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
         /// <param name="character">The character</param>
         /// <param name="isWord">Determines whether this <see cref="Node"/> finishes a word</param>
         /// <param name="value">The value, represented by this <see cref="Node"/></param>
-        public Node(char character, bool isWord, string? value = null) : this()
+        internal Node(char character, bool isWord, string? value = null) : this()
         {
             Character = character;
             IsWord = isWord;
@@ -227,6 +223,11 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
         public readonly bool HasNode => !Unsafe.IsNullRef(ref mNode);
 
         /// <summary>
+        /// Determines whether this node was matched to a wildcard and shouldn't be marked as visited.
+        /// </summary>
+        internal bool IsWildCard { get; set; }
+
+        /// <summary>
         /// Gets a reference to the wrapped <see cref="Trie.Node"/>.
         /// If <see cref="HasNode"/> is <see langword="false"/>, an <see cref="InvalidOperationException"/> is thrown.
         /// </summary>
@@ -244,24 +245,21 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
         /// Determines whether this node already served as the start node of a walk.
         /// This prevents identical retries from occurring multiple times.
         /// </summary>
-        public bool Visited { get; set; }
+        internal bool Visited { get; set; }
 
         #endregion
 
         #region Construction
 
         /// <summary>
-        /// Creates a new <see cref="NodeReference"/>, representing <see langword="null"/>.
-        /// </summary>
-        public NodeReference() { }
-
-        /// <summary>
         /// Creates a new <see cref="NodeReference"/>, representing a reference to the given <see cref="Trie.Node"/>.
         /// </summary>
         /// <param name="node">A reference to a <see cref="Trie.Node"/></param>
-        public NodeReference(ref Node node)
+        /// <param name="wildCard">Determines whether this node was matched to a wildcard and shouldn't be marked as visited</param>
+        internal NodeReference(ref Node node, bool wildCard = false)
         {
             mNode = ref node;
+            IsWildCard = wildCard;
         }
 
         #endregion
@@ -904,13 +902,13 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
             nodeRef.Visited = true;
             if (nodeRef.Node.RemainingDepth >= pattern.Count)
             {
-                var charToMatch = pattern[0];
+                var curMatch = pattern[0];
                 for (var i = 0; i < nodeRef.Node.Children.Length; i++)
                 {
-                    var childRef = new NodeReference(ref nodeRef.Node.Children[i]);
+                    var childRef = new NodeReference(ref nodeRef.Node.Children[i], curMatch.Primary == null);
 
                     buffer.Append(childRef.Node.Character);
-                    if (charToMatch.IsMatch(childRef.Node.Character)) // char is a match; try to match remaining strings to remaining pattern if possible
+                    if (curMatch.IsMatch(childRef.Node.Character)) // char is a match; try to match remaining strings to remaining pattern if possible
                     {
                         foreach (var word in WalkWithRetry(ref childRef, ref childRef, pattern, buffer, length, matchCount + 1)) // keep matching
                         {
@@ -959,7 +957,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
 
                 for (var i = 0; i < nodeRef.Node.Children.Length; i++)
                 {
-                    var childRef = new NodeReference(ref nodeRef.Node.Children[i]);
+                    var childRef = new NodeReference(ref nodeRef.Node.Children[i], curMatch.Primary == null);
 
                     buffer.Append(childRef.Node.Character);
                     if (curMatch.IsMatch(childRef.Node.Character)) // keep matching
@@ -968,6 +966,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
                         {
                             words.Add(word);
                         }
+
                     }
                     else // start over from the children of the first matching node
                     {
@@ -983,6 +982,10 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
                     buffer.Length--;
                 }
             }
+        }
+        if (!firstMatch.IsWildCard)
+        {
+            firstMatch.Visited = true;
         }
         return words;
     }
@@ -1069,15 +1072,15 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
             nodeRef.Visited = true;
             if (nodeRef.Node.RemainingDepth >= pattern.Count)
             {
-                var charToMatch = pattern[0];
+                var curMatch = pattern[0];
 
                 nodeRef.Visited = true;
                 for (var i = 0; i < nodeRef.Node.Children.Length; i++)
                 {
-                    var childRef = new NodeReference(ref nodeRef.Node.Children[i]);
+                    var childRef = new NodeReference(ref nodeRef.Node.Children[i], curMatch.Primary == null);
 
                     buffer.Append(childRef.Node.Character);
-                    if (charToMatch.IsMatch(childRef.Node.Character)) // char is a match; try to match remaining strings to remaining pattern if possible
+                    if (curMatch.IsMatch(childRef.Node.Character)) // char is a match; try to match remaining strings to remaining pattern if possible
                     {
                         foreach (var value in WalkValuesWithRetry(ref childRef, ref childRef, pattern, buffer, curDepth + 1, curDepth + 1, length, matchCount + 1))
                         {
@@ -1126,7 +1129,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
 
                 for (var i = 0; i < nodeRef.Node.Children.Length; i++)
                 {
-                    var childRef = new NodeReference(ref nodeRef.Node.Children[i]);
+                    var childRef = new NodeReference(ref nodeRef.Node.Children[i], curMatch.Primary == null);
 
                     buffer.Append(childRef.Node.Character);
                     if (curMatch.IsMatch(childRef.Node.Character)) // keep matching
@@ -1140,7 +1143,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
                     {
                         if (!firstMatch.Visited)
                         {
-                            var retryBuffer = new StringBuilder(buffer.ToString().Substring(0, buffer.Length - matchCount));
+                            var retryBuffer = new StringBuilder(buffer.ToString()[..(buffer.Length - matchCount)]);
                             foreach (var value in WalkValuesContaining(ref firstMatch, pattern, retryBuffer, originalDepth, length, 0))
                             {
                                 values.Add(value);
@@ -1150,6 +1153,10 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
                     buffer.Length--;
                 }
             }
+        }
+        if (!firstMatch.IsWildCard)
+        {
+            firstMatch.Visited = true;
         }
         return values;
     }

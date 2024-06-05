@@ -672,3 +672,24 @@ public class E_BenchMarking
 
     #endregion
 }
+
+[TestClass]
+public class F_NoDoubleResults
+{
+    [TestMethod]
+    public void Run()
+    {
+        IEnumerable<string> words;
+        var tree = new Trie
+        {
+            "os", // the children of 'o' should not be visited twice -> word with multiple matching character sequences will be returned multiple times
+            "ordetroepen",
+            "ordewacht",
+            "ordewoord",
+            "ordewoorden",
+            "woordvolgorde"
+        };
+        words = tree.Find("ord", false);
+        Assert.IsTrue(words.Count() == 5);
+    }
+}
