@@ -429,7 +429,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
 
         if (pattern.Type == PatternMatchType.IsFragment)
         {
-            foreach (var word in WalkContaining(ref nodeRef, pattern, new StringBuilder(), 0, 0))
+            foreach (var word in WalkContaining(ref nodeRef, pattern, new StringBuilder(), 0))
             {
                 yield return word;
             }
@@ -889,17 +889,17 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     /// <summary>
     /// Retrieves all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="Node"/>.
     /// </summary>
-    /// <param name="node">The <see cref="Node"/> to start from</param>
+    /// <param name="node">The <see cref="NodeReference"/> to the <see cref="Node"/> to start from</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
+    /// <param name="matchCount">The number of positive matches sofar</param>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
-    private static List<string> WalkContaining(ref NodeReference nodeRef, PatternMatch pattern, StringBuilder buffer, int length, int matchCount)
+    private static List<string> WalkContaining(ref NodeReference nodeRef, PatternMatch pattern, StringBuilder buffer, int matchCount)
     {
         var words = new List<string>();
 
         if (!nodeRef.Visited)
         {
-            nodeRef.Visited = true;
             if (nodeRef.Node.RemainingDepth >= pattern.Count)
             {
                 var curMatch = pattern[0];
@@ -910,14 +910,14 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
                     buffer.Append(childRef.Node.Character);
                     if (curMatch.IsMatch(childRef.Node.Character)) // char is a match; try to match remaining strings to remaining pattern if possible
                     {
-                        foreach (var word in WalkWithRetry(ref childRef, ref childRef, pattern, buffer, length, matchCount + 1)) // keep matching
+                        foreach (var word in WalkWithRetry(ref childRef, ref childRef, pattern, buffer, matchCount + 1)) // keep matching
                         {
                             words.Add(word);
                         }
                     }
                     else // look deeper in the branch
                     {
-                        foreach (var word in WalkContaining(ref childRef, pattern, buffer, length, 0))
+                        foreach (var word in WalkContaining(ref childRef, pattern, buffer, 0))
                         {
                             words.Add(word);
                         }
@@ -925,6 +925,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
                     buffer.Length--;
                 }
             }
+            nodeRef.Visited = true;
         }
         return words;
     }
@@ -933,12 +934,13 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     /// Tries to retrieve all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="Trie.Node"/>.
     /// When a 'chain' of matchings breaks, matching will start over from the children of the node that was the first match.
     /// </summary>
-    /// <param name="node">The <see cref="Node"/> to start from</param>
-    /// <param name="firstMatch">The <see cref="NodeReference"/> that represents the first matching character</param>
+    /// <param name="node">The <see cref="NodeReference"/> to the <see cref="Node"/> to start from</param>
+    /// <param name="firstMatch">The <see cref="NodeReference"/> to the <see cref="Node"/> that represents the first matching character</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
+    /// <param name="matchCount">The number of positive matches sofar</param>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
-    private static List<string> WalkWithRetry(ref NodeReference nodeRef, ref NodeReference firstMatch, PatternMatch pattern, StringBuilder buffer, int length, int matchCount)
+    private static List<string> WalkWithRetry(ref NodeReference nodeRef, ref NodeReference firstMatch, PatternMatch pattern, StringBuilder buffer, int matchCount)
     {
         var words = new List<string>();
 
@@ -957,35 +959,37 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
 
                 for (var i = 0; i < nodeRef.Node.Children.Length; i++)
                 {
-                    var childRef = new NodeReference(ref nodeRef.Node.Children[i], curMatch.Primary == null);
-
-                    buffer.Append(childRef.Node.Character);
-                    if (curMatch.IsMatch(childRef.Node.Character)) // keep matching
+                    if (!nodeRef.Visited)
                     {
-                        foreach (var word in WalkWithRetry(ref childRef, ref firstMatch, pattern, buffer, length, matchCount + 1))
-                        {
-                            words.Add(word);
-                        }
+                        var childRef = new NodeReference(ref nodeRef.Node.Children[i], curMatch.Primary == null);
 
-                    }
-                    else // start over from the children of the first matching node
-                    {
-                        if (!firstMatch.Visited)
+                        buffer.Append(childRef.Node.Character);
+                        if (curMatch.IsMatch(childRef.Node.Character)) // keep matching
                         {
-                            var retryBuffer = new StringBuilder(buffer.ToString()[..(buffer.Length - matchCount)]);
-                            foreach (var word in WalkContaining(ref firstMatch, pattern, retryBuffer, length, 0))
+                            foreach (var word in WalkWithRetry(ref childRef, ref firstMatch, pattern, buffer, matchCount + 1))
                             {
                                 words.Add(word);
                             }
+
                         }
+                        else // start over from the children of the first matching node
+                        {
+                            if (!firstMatch.Visited)
+                            {
+                                var retryBuffer = new StringBuilder(buffer.ToString()[..(buffer.Length - matchCount)]);
+
+                                foreach (var word in WalkContaining(ref firstMatch, pattern, retryBuffer, 0))
+                                {
+                                    words.Add(word);
+                                }
+                                firstMatch.Visited = true;
+                            }
+                        }
+                        buffer.Length--;
                     }
-                    buffer.Length--;
                 }
             }
-        }
-        if (!firstMatch.IsWildCard)
-        {
-            firstMatch.Visited = true;
+            nodeRef.Visited = true;
         }
         return words;
     }

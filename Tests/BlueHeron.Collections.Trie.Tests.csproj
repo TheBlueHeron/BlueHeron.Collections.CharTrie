@@ -12,6 +12,12 @@
 	  <Compile Remove="Objects\SizeOf.cs" />
 	</ItemGroup>
 	<ItemGroup>
+	  <None Remove="Dictionaries\nl.dic" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Compile Include="Dictionaries\nl.dic" />
+	</ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="coverlet.collector" Version="6.0.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -22,9 +28,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Trie\BlueHeron.Collections.Trie.csproj" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Dictionaries\" />
 	</ItemGroup>
 	<ItemGroup>
 	  <None Update="Dictionaries\de.dic">
@@ -39,7 +42,7 @@
 	  <None Update="Dictionaries\la.dic">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
-	  <None Update="Dictionaries\nl.dic">
+	  <None Update="Dictionaries\nl.dic_old">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	  <None Update="Dictionaries\sp.dic">

@@ -10,6 +10,7 @@ public class PatternMatch : List<CharMatch>
 {
     #region Objects and variables
 
+    private const string errNoFirstOrLastWildCard = "First and last character should not be null when Type is PatternMatchType.IsFragment.";
     internal const string _DOTSTAR = ".*";
 
     #endregion
@@ -34,12 +35,26 @@ public class PatternMatch : List<CharMatch>
     /// Creates a new <see cref="PatternMatch"/> from the given <see cref="IEnumerable{char?}"/>.
     /// A null char in the collection will yield a wildcard.
     /// </summary>
-    public PatternMatch(IEnumerable<char?> pattern, PatternMatchType type) : base(pattern.ToCharMatchArray()) { Type = type; }
+    [DebuggerStepThrough()]
+    public PatternMatch(IEnumerable<char?> pattern, PatternMatchType type) : base(pattern.ToCharMatchArray())
+    {
+        if (type == PatternMatchType.IsFragment && (pattern.First() == null || pattern.Last() == null))
+        {
+            throw new ArgumentException(errNoFirstOrLastWildCard);
+        }
+        Type = type;
+    }
 
     /// <summary>
     /// Creates a new <see cref="PatternMatch"/> from the given <see cref="IEnumerable{CharMatch}"/>.
     /// </summary>
-    public PatternMatch(IEnumerable<CharMatch> collection, PatternMatchType type) : base(collection) { Type = type; }
+    public PatternMatch(IEnumerable<CharMatch> collection, PatternMatchType type) : base(collection) {
+        if (type == PatternMatchType.IsFragment && (collection.First().Primary == null || collection.Last().Primary == null))
+        {
+            throw new ArgumentException(errNoFirstOrLastWildCard);
+        }
+        Type = type;
+    }
 
     #endregion
 

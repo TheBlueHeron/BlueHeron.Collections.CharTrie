@@ -190,6 +190,27 @@ public class B_TrieMapTests
 public class C_PatternMatchTests
 {
     [TestMethod]
+    public void _HiddenOptimizationErrors()
+    {
+        IEnumerable<string> words;
+        var tree = new Trie
+        {
+            "os", // the children of 'o' should not be visited twice -> word with multiple matching character sequences will be returned multiple times
+            "ordetroepen",
+            "ordewacht",
+            "ordewoord",
+            "ordewoorden",
+            "woordvolgorde"
+        };
+        words = tree.Find("ord", false);
+        Assert.IsTrue(words.Count() == 5);
+
+        tree = ["ges", "gres", "grges"]; // Node 'Visited' optimization should not cause omissions
+        words = tree.Find(new PatternMatch(['g', 'e', 's'], PatternMatchType.IsFragment));
+        Assert.IsTrue(words.Count() == 2);
+    }
+
+    [TestMethod]
     public void PrefixMatching()
     {
         var trie = A_TrieTests.Create();
@@ -412,7 +433,7 @@ public class E_BenchMarking
         List<string> lstWords = [];
         List<string> lstTestWords = [];
         List<string> lstPrefixes = ["aan", "op", "in", "ver", "mee", "hoog", "laag", "tussen", "ter", "over"]; // high prevalence prefixes (in dutch anyway)
-        List<char?[]> lstPatterns = [['o', 'r', 'd'], ['g', null, 's'], ['o', null, 'o']];
+        List<char?[]> lstPatterns = [['o', 'r', 'd'], ['g', 'e', 's'], ['o', null, 'o']];
 
         BenchMarkResult bmListContains = new();
         BenchMarkResult bmTrieContains = new();
@@ -671,25 +692,4 @@ public class E_BenchMarking
     }
 
     #endregion
-}
-
-[TestClass]
-public class F_NoDoubleResults
-{
-    [TestMethod]
-    public void Run()
-    {
-        IEnumerable<string> words;
-        var tree = new Trie
-        {
-            "os", // the children of 'o' should not be visited twice -> word with multiple matching character sequences will be returned multiple times
-            "ordetroepen",
-            "ordewacht",
-            "ordewoord",
-            "ordewoorden",
-            "woordvolgorde"
-        };
-        words = tree.Find("ord", false);
-        Assert.IsTrue(words.Count() == 5);
-    }
 }
