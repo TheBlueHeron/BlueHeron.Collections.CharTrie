@@ -6,6 +6,7 @@ namespace BlueHeron.Collections.Trie.Search;
 /// An extended <see cref="List{CharMatch}"/> that represents a pattern of characters, including wildcards.
 /// </summary>
 [DebuggerStepThrough()]
+[DebuggerDisplay("{Regex}")]
 public class PatternMatch : List<CharMatch>
 {
     #region Objects and variables
@@ -21,6 +22,11 @@ public class PatternMatch : List<CharMatch>
     /// Gets or sets the <see cref="PatternMatchType"/> to use. Default: <see cref="PatternMatchType.IsPrefix"/>.
     /// </summary>
     public PatternMatchType Type { get; set; }
+
+    /// <summary>
+    /// Gets the regex expression for this <see cref="PatternMatch"/>.
+    /// </summary>
+    public string Regex => ToString();
 
     #endregion
 

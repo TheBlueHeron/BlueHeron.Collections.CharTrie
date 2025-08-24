@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using BlueHeron.Collections.Trie.Serialization;
 
@@ -9,6 +10,7 @@ namespace BlueHeron.Collections.Trie;
 /// </summary>
 [JsonConverter(typeof(NodeSerializer))]
 [StructLayout(LayoutKind.Auto)]
+[DebuggerDisplay("{Character} (IsWord: {IsWord} | Value: {Value})")]
 public struct TrieNode : IComparable<TrieNode>, IEquatable<TrieNode>
 {
     #region Fields
@@ -60,7 +62,8 @@ public struct TrieNode : IComparable<TrieNode>, IEquatable<TrieNode>
     /// </summary>
     public TrieNode()
     {
-        Children = []; RemainingDepth = -1;
+        Children = [];
+        RemainingDepth = -1;
     }
 
     /// <summary>
@@ -126,6 +129,11 @@ public struct TrieNode : IComparable<TrieNode>, IEquatable<TrieNode>
     /// Returns the number of words represented by this <see cref="TrieNode"/> and its children.
     /// </summary>
     public readonly int NumWords() => (IsWord ? 1 : 0) + Children.Sum(n => n.NumWords());
+
+    /// <summary>
+    /// Overridden to return the <see cref="Character"/> value and whether it has been visited already.
+    /// </summary>
+    public readonly override string ToString() => $"{Character} (IsWord: {IsWord} | Value: {Value})";
 
     #endregion
 

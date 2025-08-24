@@ -50,6 +50,7 @@ public class CharMatch
     /// Creates a new <see cref="CharMatch"/>.
     /// </summary>
     /// <param name="primary">The primary character for which to find a match</param>
+    [DebuggerStepThrough()]
     public CharMatch(char? primary)
     {
         Primary = primary;
@@ -78,6 +79,7 @@ public class CharMatch
     /// <param name="character">The character to match</param>
     /// <returns>Boolean, <see langword="true"/> if the character is a match</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [DebuggerStepThrough()]
     public bool IsMatch(char character)
     {
         if (Primary == null)

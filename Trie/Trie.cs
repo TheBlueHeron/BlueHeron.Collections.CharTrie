@@ -607,9 +607,9 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     }
 
     /// <summary>
-    /// Retrieves all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="TrieNode"/>.
+    /// Retrieves all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="NodeReference"/>.
     /// </summary>
-    /// <param name="node">The <see cref="NodeReference"/> to the <see cref="TrieNode"/> to start from</param>
+    /// <param name="nodeRef">The <see cref="NodeReference"/> to the <see cref="TrieNode"/> to start from</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
     /// <param name="matchCount">The number of positive matches sofar</param>

@@ -1,11 +1,13 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using BlueHeron.Collections.Trie.Search;
 
 namespace BlueHeron.Collections.Trie;
 
 /// <summary>
-    /// Object that constitutes a nullable reference to a <see cref="TrieNode"/> with a <see cref="Visited"/> property that is used in <see cref="PatternMatchType.IsFragment"/> type searches.
-    /// </summary>
+/// Object that constitutes a nullable reference to a <see cref="TrieNode"/> with a <see cref="Visited"/> property that is used in <see cref="PatternMatchType.IsFragment"/> type searches.
+/// </summary>
+[DebuggerDisplay("{Node} (v: {Visited})")]
 public ref struct NodeReference
 {
     #region Objects and variables
@@ -55,11 +57,21 @@ public ref struct NodeReference
     /// </summary>
     /// <param name="node">A reference to a <see cref="TrieNode"/></param>
     /// <param name="wildCard">Determines whether this node was matched to a wildcard and shouldn't be marked as visited</param>
+    [DebuggerStepThrough()]
     internal NodeReference(ref TrieNode node, bool wildCard = false)
     {
         mNode = ref node;
         IsWildCard = wildCard;
     }
+
+    #endregion
+
+    #region Public methods and functions
+
+    /// <summary>
+    /// Overridden to return the <see cref="TrieNode.ToString()"/> value and whether it has been visited already.
+    /// </summary>
+    public readonly override string ToString() => $"{Node} (v: {Visited})";
 
     #endregion
 }
