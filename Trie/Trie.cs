@@ -1,8 +1,5 @@
 ﻿using System.Collections;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -15,294 +12,17 @@ namespace BlueHeron.Collections.Trie;
 /// A search optimized data structure for words.
 /// </summary>
 [JsonConverter(typeof(TrieConverter))]
-[SuppressMessage("Performance", "CA1710:Rename to end with Collection or Dictionary", Justification = "Nomen est omen.")]
-public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
+public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
 {
     #region Fields
 
-    private Node mRoot;
+    private TrieNode mRoot;
     private const char _rootChar = char.MaxValue;
     private const string _Export = "export";
     private const string _Import = "import";
 
     private static readonly CompositeFormat errImpEx = CompositeFormat.Parse("Unable to {0} '{1}'. See inner exception for details.");
     private static readonly JsonSerializerOptions mSerializerOptions = new() { WriteIndented = false };
-
-    #endregion
-
-    #region Nodes
-
-    /// <summary>
-    /// A node in the <see cref="Trie"/>, which represents a character.
-    /// </summary>
-    [JsonConverter(typeof(NodeSerializer))]
-    [StructLayout(LayoutKind.Auto)]
-    public struct Node: IComparable<Node>, IEquatable<Node>
-    {
-        #region Fields
-
-        private int mRemainingDepth;
-
-        /// <summary>
-        /// The character. Is only <see langword="null"/> on the root node.
-        /// </summary>
-        public char Character;
-        /// <summary>
-        /// The <see cref="Node"/>'s collection of child <see cref="Node"/>s.
-        /// </summary>
-        public Node[] Children;
-        /// <summary>
-        /// Determines whether this <see cref="Node"/> finishes a word.
-        /// </summary>
-        public bool IsWord;
-        /// <summary>
-        /// The maximum depth of this <see cref="Node"/>'s tree of children.
-        /// </summary>
-        public int RemainingDepth
-        {
-            get
-            {
-                if (mRemainingDepth < 0)
-                {
-                    mRemainingDepth = Children.Length == 0 ? 0 : 1 + Children.Max(n => n.RemainingDepth);
-                }
-                return mRemainingDepth;
-            }
-            internal set => mRemainingDepth = value;
-        }
-        /// <summary>
-        /// The value that is represented by this <see cref="Node"/>.
-        /// </summary>
-        public string? Value;
-
-        #endregion
-
-        #region Construction
-
-        /// <summary>
-        /// Creates a new node without a <see cref="Character"/> and an empty <see cref="Children"/> array.
-        /// </summary>
-        public Node() { Children = []; RemainingDepth = -1; }
-
-        /// <summary>
-        /// Creates a new <see cref="Node"/>.
-        /// </summary>
-        /// <param name="character">The character</param>
-        /// <param name="isWord">Determines whether this <see cref="Node"/> finishes a word</param>
-        /// <param name="value">The value, represented by this <see cref="Node"/></param>
-        internal Node(char character, bool isWord, string? value = null) : this()
-        {
-            Character = character;
-            IsWord = isWord;
-            Value = value;
-        }
-
-        #endregion
-
-        #region Public methods and functions
-
-        /// <summary>
-        /// Returns a <see cref="NodeReference"/> to the child <see cref="Node"/> that represent the given <see cref="char"/> if it exists, else <see langword="null"/>.
-        /// </summary>
-        /// <param name="character">The <see cref="char"/> to find</param>
-        /// <returns>A <see cref="NodeReference"/></returns>
-        public NodeReference GetNode(char character)
-        {
-            var idx = Search(ref Children, 0, Children.Length - 1, character);
-            return idx < 0 ? new NodeReference() : new NodeReference(ref Children[idx]);
-        }
-
-        /// <summary>
-        /// Sets the given <see cref="NodeReference"/> to wrap the <see cref="Node"/> representing the given prefix, or <see langword="null"/>.
-        /// Returns a value signifying whether the given prefix could be located.
-        /// </summary>
-        /// <param name="prefix">The <see cref="string"/> prefix to match</param>
-        /// <param name="nodeRef">Will hold a <see cref="NodeReference"/> to the <see cref="Node"/> representing the given prefix, or <see langword="null"/></param>
-        /// <returns>A value signifying whether the prefix could be located</returns>
-        public static bool GetNode(string prefix, ref NodeReference nodeRef)
-        {
-            if (string.IsNullOrEmpty(prefix))
-            {
-                throw new ArgumentNullException(nameof(prefix));
-            }
-            //var nodeRef = new NodeReference(ref this);
-
-            foreach (var prefixChar in prefix)
-            {
-                nodeRef = nodeRef.Node.GetNode(prefixChar);
-                if (!nodeRef.HasNode)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        /// <summary>
-        /// Returns the total number of<see cref="Node"/>s under this <see cref="Node"/>, including this <see cref="Node"/> itself.
-        /// </summary>
-        public readonly int NumNodes() => 1 + Children.Sum(n => n.NumNodes());
-
-        /// <summary>
-        /// Returns the number of words represented by this <see cref="Node"/> and its children.
-        /// </summary>
-        public readonly int NumWords() => (IsWord ? 1 : 0) + Children.Sum(n => n.NumWords());
-
-        #endregion
-
-        #region IComparable
-
-        /// <summary>
-        /// Executes <see cref="char.CompareTo(char)"/>.
-        /// </summary>
-        /// <param name="other">The <see cref="Node"/> to compare</param>
-        public readonly int CompareTo(Node other) => Character.CompareTo(other.Character);
-
-        /// <inheritdoc/>
-        public readonly override bool Equals(object? obj) => obj is Node node && Equals(node);
-
-        /// <inheritdoc/>
-        public readonly override int GetHashCode() => Character.GetHashCode();
-
-        /// <summary>
-        /// Returns a value that indicates whether this instance is equal to a specified object.
-        /// </summary>
-        /// <param name="other">An object to compare with this instance or null</param>
-        /// <returns><see cref="bool"/>, <see langword="true"/> if the specified object is equal to this instance</returns>
-        public readonly bool Equals(Node other) => Character.Equals(other.Character);
-
-        public static bool operator ==(Node left, Node right)
-        {
-            return left.Equals(right);
-        }
-
-        public static bool operator !=(Node left, Node right)
-        {
-            return !(left == right);
-        }
-
-        public static bool operator <(Node left, Node right)
-        {
-            return left.CompareTo(right) < 0;
-        }
-
-        public static bool operator <=(Node left, Node right)
-        {
-            return left.CompareTo(right) <= 0;
-        }
-
-        public static bool operator >(Node left, Node right)
-        {
-            return left.CompareTo(right) > 0;
-        }
-
-        public static bool operator >=(Node left, Node right)
-        {
-            return left.CompareTo(right) >= 0;
-        }
-
-        #endregion
-    }
-
-    /// <summary>
-    /// Object that constitutes a nullable reference to a <see cref="Trie.Node"/> with a <see cref="Visited"/> property that is used in <see cref="PatternMatchType.IsFragment"/> type searches.
-    /// </summary>
-    public ref struct NodeReference
-    {
-        #region Objects and variables
-
-        private readonly ref Node mNode;
-
-        #endregion
-
-        #region Properties
-
-        /// <summary>
-        /// Gets a value, determining whether this <see cref="NodeReference"/> wraps a <see cref="Trie.Node"/> or is <see langword="null"/>.
-        /// </summary>
-        public readonly bool HasNode => !Unsafe.IsNullRef(ref mNode);
-
-        /// <summary>
-        /// Determines whether this node was matched to a wildcard and shouldn't be marked as visited.
-        /// </summary>
-        internal bool IsWildCard { get; set; }
-
-        /// <summary>
-        /// Gets a reference to the wrapped <see cref="Trie.Node"/>.
-        /// If <see cref="HasNode"/> is <see langword="false"/>, an <see cref="InvalidOperationException"/> is thrown.
-        /// </summary>
-        /// <exception cref="InvalidOperationException">No <see cref="Trie.Node"/> is present. Call <see cref="HasNode"/> first.</exception>
-        public readonly ref Node Node
-        {
-            get
-            {
-                if (!HasNode) { throw new InvalidOperationException(); }
-                return ref mNode;
-            }
-        }
-
-        /// <summary>
-        /// Determines whether this node already served as the start node of a walk.
-        /// This prevents identical retries from occurring multiple times.
-        /// </summary>
-        internal bool Visited { get; set; }
-
-        #endregion
-
-        #region Construction
-
-        /// <summary>
-        /// Creates a new <see cref="NodeReference"/>, representing a reference to the given <see cref="Trie.Node"/>.
-        /// </summary>
-        /// <param name="node">A reference to a <see cref="Trie.Node"/></param>
-        /// <param name="wildCard">Determines whether this node was matched to a wildcard and shouldn't be marked as visited</param>
-        internal NodeReference(ref Node node, bool wildCard = false)
-        {
-            mNode = ref node;
-            IsWildCard = wildCard;
-        }
-
-        #endregion
-    }
-
-    /// <summary>
-    /// Wrapper for a <see cref="Trie.Node"/> that is used in deserialization and <see cref="Search.PatternMatchType.IsFragment"/> searches.
-    /// </summary>
-    /// <param name="node">The <see cref="Node"/></param>
-    [JsonConverter(typeof(NodeDeserializer))]
-    internal sealed class DeserializedNode(Node node)
-    {
-        #region Objects and variables
-
-        private int? mNumChildren;
-
-        #endregion
-
-        #region Properties
-
-        /// <summary>
-        /// Gets or sets the wrapped <see cref="Trie.Node"/>.
-        /// </summary>
-        public Node Node = node;
-
-        /// <summary>
-        /// Gets the expected number of <see cref="Trie.Node"/>s in the <see cref="Trie.Node"/>'s <see cref="Node.Children"/> array.
-        /// </summary>
-        public int NumChildren
-        {
-            get
-            {
-                if (!mNumChildren.HasValue)
-                {
-                    mNumChildren = Node.Children.Length;
-                }
-                return mNumChildren.Value;
-            }
-            internal set => mNumChildren = value;
-        }
-
-        #endregion
-    }
 
     #endregion
 
@@ -313,7 +33,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     /// </summary>
     public Trie()
     {
-        mRoot = new Node(_rootChar, false);
+        mRoot = new TrieNode(_rootChar, false);
     }
 
     #endregion
@@ -321,9 +41,9 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     #region Properties
 
     /// <summary>
-    /// Gets the root <see cref="Node"/>.
+    /// Gets the root <see cref="TrieNode"/>.
     /// </summary>
-    public Node RootNode
+    public TrieNode RootNode
     {
         get => mRoot;
         internal set => mRoot = value;
@@ -354,10 +74,10 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Walks depth-first through the tree and returns every <see cref="Node"/> that is encountered, accompanied with its key.
+    /// Walks depth-first through the tree and returns every <see cref="TrieNode"/> that is encountered, accompanied with its key.
     /// </summary>
     /// <returns>An <see cref="IEnumerable{Node}"/></returns>
-    public IEnumerable<Node> AsEnumerable()
+    public IEnumerable<TrieNode> AsEnumerable()
     {
         return Walk(new NodeReference(ref mRoot));
     }
@@ -453,7 +173,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
         ArgumentException.ThrowIfNullOrEmpty(word, nameof(word));
         var nodeRef = new NodeReference(ref mRoot);
 
-        if (Node.GetNode(word, ref nodeRef))
+        if (TrieNode.GetNode(word, ref nodeRef))
         {
             return nodeRef.Node.Value;
         }
@@ -501,13 +221,13 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Returns an <see cref="IEnumerator{Node}"/> that allows for enumerating all <see cref="Node"/>s in this <see cref="Trie"/>.
+    /// Returns an <see cref="IEnumerator{Node}"/> that allows for enumerating all <see cref="TrieNode"/>s in this <see cref="Trie"/>.
     /// </summary>
     /// <returns>An <see cref="IEnumerator{Node}"/></returns>
     public IEnumerator GetEnumerator() => AsEnumerable().GetEnumerator();
 
     /// <summary>
-    /// Gets a <see cref="NodeReference"/> to the <see cref="Node"/> in this <see cref="Trie"/> that represents the given prefix, if it exists, or <see langword="null"/>.
+    /// Gets a <see cref="NodeReference"/> to the <see cref="TrieNode"/> in this <see cref="Trie"/> that represents the given prefix, if it exists, or <see langword="null"/>.
     /// </summary>
     /// <param name="prefix">The <see cref="string"/> to match</param>
     /// <returns>A <see cref="NodeReference"/></returns>
@@ -516,7 +236,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
         ArgumentException.ThrowIfNullOrEmpty(prefix);
         var nodeRef = new NodeReference(ref mRoot);
 
-        return Node.GetNode(prefix, ref nodeRef) ? nodeRef : new NodeReference();
+        return TrieNode.GetNode(prefix, ref nodeRef) ? nodeRef : new NodeReference();
     }
 
     /// <summary>
@@ -531,13 +251,13 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
         if (GetWord(chars, mRoot, value))
         {
             chars.Reverse(); // last character was added first
-            return new string(chars.ToArray());
+            return new string([.. chars]);
         }
         return null;
     }
 
     /// <summary>
-    /// Returns the number of <see cref="Node"/>s in this <see cref="Collections.Trie"/>.
+    /// Returns the number of <see cref="TrieNode"/>s in this <see cref="Collections.Trie"/>.
     /// </summary>
     public int NumNodes() => mRoot.NumNodes();
 
@@ -712,20 +432,20 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     #region Private methods and functions
 
     /// <summary>
-    /// Adds the given character as a <see cref="Node"/> to the given parent <see cref="Node"/>'s <see cref="Node.Children"/> collection and returns its index in the collection.
-    /// If a <see cref="Node"/> representing this character already exists, just its index is returned.
+    /// Adds the given character as a <see cref="TrieNode"/> to the given parent <see cref="TrieNode"/>'s <see cref="TrieNode.Children"/> collection and returns its index in the collection.
+    /// If a <see cref="TrieNode"/> representing this character already exists, just its index is returned.
     /// </summary>
     /// <param name="character">The character</param>
-    /// <param name="parentNode">The parent <see cref="Node"/></param>
+    /// <param name="parentNode">The parent <see cref="TrieNode"/></param>
     /// <param name="isWord">Determines whether the character finishes a word</param>
     /// <param name="value">The value, represented by this character</param>
-    /// <returns>The index of the <see cref="Node"/> in the parent's <see cref="Node.Children"/> collection</returns>
-    private static int AddNode(char character, ref Node parentNode, bool isWord, string? value)
+    /// <returns>The index of the <see cref="TrieNode"/> in the parent's <see cref="TrieNode.Children"/> collection</returns>
+    private static int AddNode(char character, ref TrieNode parentNode, bool isWord, string? value)
     {
         int idx;
         if (parentNode.Children.Length == 0)
         {
-            parentNode.Children = [new Node(character, isWord, isWord? value : null)];
+            parentNode.Children = [new TrieNode(character, isWord, isWord? value : null)];
             idx = parentNode.Children.Length - 1;
         }
         else
@@ -733,38 +453,38 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
             idx = Search(ref parentNode.Children, 0, parentNode.Children.Length - 1, character);
             if (idx < 0)
             {
-                parentNode.Children = [.. parentNode.Children, new Node()];
-                idx = Insert(ref parentNode.Children, new Node(character, isWord, isWord ? value : null));
+                parentNode.Children = [.. parentNode.Children, new TrieNode()];
+                idx = Insert(ref parentNode.Children, new TrieNode(character, isWord, isWord ? value : null));
             }
         }
         return idx;
     }
 
     /// <summary>
-    /// Returns an <see cref="IEnumerator"/> that allows for enumerating all <see cref="Node"/>s in this <see cref="Trie"/>.
+    /// Returns an <see cref="IEnumerator"/> that allows for enumerating all <see cref="TrieNode"/>s in this <see cref="Trie"/>.
     /// </summary>
     /// <returns>An <see cref="IEnumerator"/></returns>
-    IEnumerator<Node> IEnumerable<Node>.GetEnumerator() => AsEnumerable().GetEnumerator();
+    IEnumerator<TrieNode> IEnumerable<TrieNode>.GetEnumerator() => AsEnumerable().GetEnumerator();
 
     /// <summary>
-    /// Returns the <see cref="Node"/> represented by the given array of indexes.
+    /// Returns the <see cref="TrieNode"/> represented by the given array of indexes.
     /// </summary>
     /// <param name="nodeIndexes">The array of indexes</param>
-    /// <returns>The <see cref="Node"/></returns>
-    private ref Node GetNode(ref int[] nodeIndexes)
+    /// <returns>The <see cref="TrieNode"/></returns>
+    private ref TrieNode GetNode(ref int[] nodeIndexes)
     {
         return ref GetNode(ref mRoot, ref nodeIndexes, 0);
     }
 
     /// <summary>
-    /// Recursive function that walks through the <see cref="Trie"/> by index and returns the resulting <see cref="Node"/> by reference.
-    /// An index of <code>-1</code> returns the current <see cref="Node"/>.
+    /// Recursive function that walks through the <see cref="Trie"/> by index and returns the resulting <see cref="TrieNode"/> by reference.
+    /// An index of <code>-1</code> returns the current <see cref="TrieNode"/>.
     /// </summary>
-    /// <param name="curNode">The current <see cref="Node"/> to walk</param>
+    /// <param name="curNode">The current <see cref="TrieNode"/> to walk</param>
     /// <param name="nodeIndexes">The array of indexes</param>
     /// <param name="curDepth">The depth of the walk down the <see cref="Trie"/> so far</param>
-    /// <returns>The <see cref="Node"/> represented by the index array</returns>
-    private static ref Node GetNode(ref Node curNode, ref int[] nodeIndexes, int curDepth)
+    /// <returns>The <see cref="TrieNode"/> represented by the index array</returns>
+    private static ref TrieNode GetNode(ref TrieNode curNode, ref int[] nodeIndexes, int curDepth)
     {
         if (nodeIndexes.Length == curDepth || nodeIndexes[curDepth] == -1)
         {
@@ -774,12 +494,12 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Returns the first word that carries the given <see cref="Node.Value"/>, starting from the given node.
+    /// Returns the first word that carries the given <see cref="TrieNode.Value"/>, starting from the given node.
     /// </summary>
     /// <param name="chars">The <see cref="List{char}"/> to append characters to</param>
-    /// <param name="node">The <see cref="Node"/> from which to start</param>
+    /// <param name="node">The <see cref="TrieNode"/> from which to start</param>
     /// <param name="value">The value> of which to find the word</param>
-    private static bool GetWord(List<char> chars, Node node, string value)
+    private static bool GetWord(List<char> chars, TrieNode node, string value)
     {
         foreach (var item in node.Children)
         {
@@ -803,12 +523,12 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Walks depth-first through the tree starting at the given node and returns every <see cref="Node"/> that is encountered.
+    /// Walks depth-first through the tree starting at the given node and returns every <see cref="TrieNode"/> that is encountered.
     /// </summary>
     /// <returns>An <see cref="IEnumerable{Node}"/></returns>
-    internal static List<Node> Walk(NodeReference nodeRef)
+    internal static List<TrieNode> Walk(NodeReference nodeRef)
     {
-        var nodes = new List<Node>([nodeRef.Node]);
+        var nodes = new List<TrieNode>([nodeRef.Node]);
 
         for (var i = 0; i < nodeRef.Node.Children.Length; i++)
         {
@@ -821,9 +541,9 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Gets all the words recursively, starting from the given <see cref="Node"/>.
+    /// Gets all the words recursively, starting from the given <see cref="TrieNode"/>.
     /// </summary>
-    /// <param name="node">The <see cref="Node"/> to start from</param>
+    /// <param name="node">The <see cref="TrieNode"/> to start from</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
     private static List<string> Walk(NodeReference nodeRef, StringBuilder buffer)
     {
@@ -846,9 +566,9 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Tries to retrieve all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="Node"/>.
+    /// Tries to retrieve all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="TrieNode"/>.
     /// </summary>
-    /// <param name="node">The <see cref="Node"/> to start from</param>
+    /// <param name="node">The <see cref="TrieNode"/> to start from</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
@@ -887,9 +607,9 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Retrieves all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="Node"/>.
+    /// Retrieves all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="TrieNode"/>.
     /// </summary>
-    /// <param name="node">The <see cref="NodeReference"/> to the <see cref="Node"/> to start from</param>
+    /// <param name="node">The <see cref="NodeReference"/> to the <see cref="TrieNode"/> to start from</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
     /// <param name="matchCount">The number of positive matches sofar</param>
@@ -931,11 +651,11 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Tries to retrieve all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="Trie.Node"/>.
+    /// Tries to retrieve all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="TrieNode"/>.
     /// When a 'chain' of matchings breaks, matching will start over from the children of the node that was the first match.
     /// </summary>
-    /// <param name="node">The <see cref="NodeReference"/> to the <see cref="Node"/> to start from</param>
-    /// <param name="firstMatch">The <see cref="NodeReference"/> to the <see cref="Node"/> that represents the first matching character</param>
+    /// <param name="node">The <see cref="NodeReference"/> to the <see cref="TrieNode"/> to start from</param>
+    /// <param name="firstMatch">The <see cref="NodeReference"/> to the <see cref="TrieNode"/> that represents the first matching character</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
     /// <param name="matchCount">The number of positive matches sofar</param>
@@ -995,7 +715,7 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Gets all the values recursively starting from the given <see cref="Trie.Node"/>.
+    /// Gets all the values recursively starting from the given <see cref="TrieNode"/>.
     /// </summary>
     /// <param name="curDepth">The depth of the current node</param>
     /// <param name="length">The length of the word</param>
@@ -1018,9 +738,9 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Retrieves all values that match the given <see cref="PatternMatch"/> starting from the given <see cref="Node"/>.
+    /// Retrieves all values that match the given <see cref="PatternMatch"/> starting from the given <see cref="TrieNode"/>.
     /// </summary>
-    /// <param name="node">The <see cref="Node"/> to start from</param>
+    /// <param name="node">The <see cref="TrieNode"/> to start from</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to match</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re-)use</param>
     /// <returns>An <see cref="IEnumerable{double?}"/></returns>
@@ -1061,9 +781,9 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Tries to retrieve all values that match the given <see cref="PatternMatch"/> starting from the given <see cref="Node"/>.
+    /// Tries to retrieve all values that match the given <see cref="PatternMatch"/> starting from the given <see cref="TrieNode"/>.
     /// </summary>
-    /// <param name="node">The <see cref="Node"/> to start from</param>
+    /// <param name="node">The <see cref="TrieNode"/> to start from</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to match</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re-)use</param>
     /// <returns>An <see cref="IEnumerable{double?}"/></returns>
@@ -1106,10 +826,10 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Tries to retrieve all values that match the given <see cref="PatternMatch"/> starting from the given <see cref="Node"/>.
+    /// Tries to retrieve all values that match the given <see cref="PatternMatch"/> starting from the given <see cref="TrieNode"/>.
     /// When a 'chain' of matchings breaks, matching will start over from the children of the node that was the first match.
     /// </summary>
-    /// <param name="node">The <see cref="Node"/> to start from</param>
+    /// <param name="node">The <see cref="TrieNode"/> to start from</param>
     /// <param name="firstMatch">The <see cref="NodeReference"/> that represents the first matching character</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to match</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re-)use</param>
@@ -1168,12 +888,12 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     #region Array
 
     /// <summary>
-    /// Removes the given character from the given array of <see cref="Node"/>s and resizes the array without affecting the sort.
+    /// Removes the given character from the given array of <see cref="TrieNode"/>s and resizes the array without affecting the sort.
     /// If the character was removed, <see langword="true"/> is returned, else <see langword="false"/>.
     /// </summary>
-    /// <param name="nodes">The array of <see cref="Node"/>s</param>
+    /// <param name="nodes">The array of <see cref="TrieNode"/>s</param>
     /// <param name="character">The character to remove</param>
-    private static bool Delete(ref Node[] nodes, char character)
+    private static bool Delete(ref TrieNode[] nodes, char character)
     {
         var n = nodes.Length - 1;
         var pos = Search(ref nodes, 0, n, character);
@@ -1194,13 +914,13 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Inserts the given <see cref="Node"/> at the correct position in the given Array and returns its index.
+    /// Inserts the given <see cref="TrieNode"/> at the correct position in the given Array and returns its index.
     /// </summary>
-    /// <param name="nodes">The <see cref="Node[]"/> in which to insert the node</param>
+    /// <param name="nodes">The <see cref="TrieNode[]"/> in which to insert the node</param>
     /// <param name="n">The length of the array</param>
-    /// <param name="node">The <see cref="Node"/></param>
-    /// <returns>The index of the inserted <see cref="Node"/></returns>
-    private static int Insert(ref Node[] nodes, Node node)
+    /// <param name="node">The <see cref="TrieNode"/></param>
+    /// <returns>The index of the inserted <see cref="TrieNode"/></returns>
+    private static int Insert(ref TrieNode[] nodes, TrieNode node)
     {
         var n = nodes.Length - 1; int i;
         for (i = n - 1; i >= 0 && nodes[i].Character > node.Character; i--)
@@ -1212,14 +932,14 @@ public sealed class Trie : IEnumerable, IEnumerable<Trie.Node>
     }
 
     /// <summary>
-    /// Returns the index of the <see cref="Node"/> representing the given character in the given array of <see cref="Node"/>s if it exists. If it doesn't, -1 is returned.
+    /// Returns the index of the <see cref="TrieNode"/> representing the given character in the given array of <see cref="TrieNode"/>s if it exists. If it doesn't, -1 is returned.
     /// </summary>
-    /// <param name="nodes">The <see cref="Node"/> array in which to search</param>
+    /// <param name="nodes">The <see cref="TrieNode"/> array in which to search</param>
     /// <param name="low">The lower bound of the search range</param>
     /// <param name="high">The upper bound of the search range</param>
-    /// <param name="character">The character for which to find the <see cref="Node"/></param>
+    /// <param name="character">The character for which to find the <see cref="TrieNode"/></param>
     /// <returns>The index of the node that represents this character if it exists, and if not, -1 </returns>
-    private static int Search(ref Node[] nodes, int low, int high, char character)
+    internal static int Search(ref TrieNode[] nodes, int low, int high, char character)
     {
         if (high < low)
         {
