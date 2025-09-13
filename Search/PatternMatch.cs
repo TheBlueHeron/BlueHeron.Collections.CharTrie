@@ -6,7 +6,6 @@ namespace BlueHeron.Collections.Trie.Search;
 /// An extended <see cref="List{CharMatch}"/> that represents a pattern of characters, including wildcards.
 /// </summary>
 [DebuggerStepThrough()]
-[DebuggerDisplay("{Regex}")]
 public class PatternMatch : List<CharMatch>
 {
     #region Objects and variables
@@ -40,8 +39,10 @@ public class PatternMatch : List<CharMatch>
 
     /// <summary>
     /// Creates a new <see cref="PatternMatch"/> from the given <see cref="IEnumerable{char?}"/>.
-    /// A null char in the collection will yield a wildcard.
+    /// A null char in the collection will yield a wildcard for that position.
     /// </summary>
+    /// <param name="pattern">The <see cref="IEnumerable{char?}"/></param>
+    /// <param name="type">The <see cref="PatternMatchType"/></param>
     [DebuggerStepThrough()]
     public PatternMatch(IEnumerable<char?> pattern, PatternMatchType type) : base(pattern.ToCharMatchArray())
     {
@@ -55,6 +56,8 @@ public class PatternMatch : List<CharMatch>
     /// <summary>
     /// Creates a new <see cref="PatternMatch"/> from the given <see cref="IEnumerable{CharMatch}"/>.
     /// </summary>
+    /// <param name="collection">The <see cref="IEnumerable{CharMatch}"/></param>
+    /// <param name="type">The <see cref="PatternMatchType"/></param>
     [DebuggerStepThrough()]
     public PatternMatch(IEnumerable<CharMatch> collection, PatternMatchType type) : base(collection)
     {

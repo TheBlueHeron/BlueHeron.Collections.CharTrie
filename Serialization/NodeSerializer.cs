@@ -14,7 +14,6 @@ internal sealed class NodeSerializer : JsonConverter<TrieNode>
     private const string _C = "c"; // NumChildren
     private const string _K = "k"; // Character
     private const string _R = "r"; // RemainingDepth
-    private const string _V = "v"; // Value
     private const string _W = "w"; // IsWord
 
     #endregion
@@ -43,10 +42,6 @@ internal sealed class NodeSerializer : JsonConverter<TrieNode>
         if (value.RemainingDepth > 0)
         {
             writer.WriteNumber(_R, value.RemainingDepth);
-        }
-        if (!string.IsNullOrEmpty(value.Value))
-        {
-            writer.WriteString(_V, value.Value);
         }
         writer.WriteEndObject();
     }

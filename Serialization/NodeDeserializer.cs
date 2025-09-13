@@ -13,7 +13,6 @@ internal sealed class NodeDeserializer : JsonConverter<DeserializedNode>
     private const string _C = "c"; // NumChildren
     private const string _K = "k"; // Character
     private const string _R = "r"; // RemainingDepth
-    private const string _V = "v"; // Value
     private const string _W = "w"; // IsWord
 
     #endregion
@@ -49,15 +48,11 @@ internal sealed class NodeDeserializer : JsonConverter<DeserializedNode>
                             break;
                         case _R:
                             reader.Read();
-                            node.RemainingDepth = reader.GetInt32();
+                            node.RemainingDepth = reader.GetInt16();
                             break;
                         case _W:
                             reader.Read();
                             node.IsWord = true;  // no need to read value, because the value is always 1, meaning 'true'. When node.IsWord = false, it is not written during serialization.
-                            break;
-                        case _V:
-                            reader.Read();
-                            node.Value = reader.GetString();
                             break;
                     }
                     break;

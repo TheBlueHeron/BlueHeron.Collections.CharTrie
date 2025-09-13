@@ -12,8 +12,8 @@ public class CharMatch
 {
     #region Objects and variables
 
-    internal const string _DOT = ".";
-    internal const string _PIPE = "|";
+    private const string _DOT = ".";
+    private const string _PIPE = "|";
 
     private readonly bool mCheckAlternatives;
     private static readonly CharMatch mWildCard = new(null, null);
@@ -24,20 +24,20 @@ public class CharMatch
 
     /// <summary>
     /// Gets an <see cref="IReadOnlyList{char}"/> to match if the <see cref="Primary"/> character was not matched.
-    /// Is ignored when <see cref="Primary"/> is <see langword="null"/>.
+    /// Is ignored when <see cref="Primary"/> is <see langword="null"/>, i.e. is a wildcard.
     /// </summary>
     [JsonPropertyName("a")]
     public IReadOnlyList<char>? Alternatives { get; }
 
     /// <summary>
     /// Gets the character for which to find a match first.
-    /// If <see langword="null"/>, this <see cref="CharMatch"/> functions as a wildcard (and <see cref="GetAlternatives()"/> are ignored).
+    /// If <see langword="null"/>, this <see cref="CharMatch"/> functions as a wildcard (and the <see cref="Alternatives"/> are ignored).
     /// </summary>
     [JsonPropertyName("p")]
     public char? Primary { get; }
 
     /// <summary>
-    /// Gets a <see cref="CharMatch"/> that matches any character.
+    /// Gets a <see cref="CharMatch"/> that will match any character.
     /// </summary>
     [JsonIgnore()]
     public static CharMatch Wildcard => mWildCard;
@@ -74,10 +74,10 @@ public class CharMatch
     #region Public methods and functions
 
     /// <summary>
-    /// Returns a boolean, determining whether the given character is a match for this <see cref="CharMatch"/>.
+    /// Returns a value, determining whether the given character is a match for this <see cref="CharMatch"/>.
     /// </summary>
     /// <param name="character">The character to match</param>
-    /// <returns>Boolean, <see langword="true"/> if the character is a match</returns>
+    /// <returns><see langword="bool"/>, <see langword="true"/> if the character is a match</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough()]
     public bool IsMatch(char character)

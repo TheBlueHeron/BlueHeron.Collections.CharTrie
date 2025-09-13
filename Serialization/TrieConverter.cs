@@ -71,7 +71,7 @@ internal sealed class TrieConverter : JsonConverter<Trie>
     }
 
     /// <summary>
-    /// Adds the appropriate (<paramref name="numChildren"/>) number of children from the given <paramref name="nodes"/> to <paramref name="parent"/>'s children array.
+    /// Adds the appropriate <paramref name="numChildren">number of children</paramref> from the given <paramref name="nodes"/> to <paramref name="parent"/>'s children array.
     /// </summary>
     /// <param name="parent">The current <see cref="TrieNode"/></param>
     /// <param name="nodes">The deserialized <see cref="DeserializedNode"/>s</param>

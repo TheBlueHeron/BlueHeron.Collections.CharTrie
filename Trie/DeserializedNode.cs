@@ -4,7 +4,7 @@ using BlueHeron.Collections.Trie.Serialization;
 namespace BlueHeron.Collections.Trie;
 
 /// <summary>
-/// Wrapper for a <see cref="TrieNode"/> that is used in deserialization and <see cref="Search.PatternMatchType.IsFragment"/> searches.
+/// Wrapper for a <see cref="TrieNode"/> that is used in deserialization.
 /// </summary>
 /// <param name="node">The <see cref="TrieNode"/> to wrap</param>
 [JsonConverter(typeof(NodeDeserializer))]

@@ -36,7 +36,7 @@ public static class GuidExtensions
     /// Returns this array of characters as an array of <see cref="CharMatch"/> objects.
     /// A null value yields a wildcard.
     /// </summary>
-    /// <param name="text">This string</param>
+    /// <param name="pattern">This <see cref="IEnumerable{char?}"/></param>
     /// <returns>An <see cref="IEnumerable{CharMatch}"/></returns>
     [DebuggerStepThrough()]
     public static IEnumerable<CharMatch> ToCharMatchArray(this IEnumerable<char?> pattern)
