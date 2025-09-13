@@ -78,7 +78,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// <returns>An <see cref="IEnumerable{Node}"/></returns>
     public IEnumerable<TrieNode> AsEnumerable()
     {
-        return Walk(mRoot);
+        return Walk(ref mRoot);
     }
 
     /// <summary>
@@ -90,16 +90,16 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     public bool Contains(string word, bool isPrefix)
     {
         ArgumentException.ThrowIfNullOrEmpty(word, nameof(word));
-        var node = mRoot;
+        ref var node = ref mRoot;
 
         foreach (var c in word)
         {
-            var childIndex = Search(ref node.Children,0, node.Children.Length - 1, c);
+            var childIndex = Find(ref node.Children,0, node.Children.Length - 1, c);
             if (childIndex < 0)
             {
                 return false;
             }
-            node = node.Children[childIndex];
+            node = ref node.Children[childIndex];
         }
         return isPrefix || node.IsWord;
     }
@@ -126,7 +126,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     public IEnumerable<string> Find(PatternMatch pattern)
     {
         ArgumentNullException.ThrowIfNull(pattern, nameof(pattern));
-        var node = mRoot;
+        ref var node = ref mRoot;
 
         node.IsVisited = false;
         if (pattern.Type == PatternMatchType.IsFragment)
@@ -138,7 +138,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
         }
         else
         {
-            foreach (var word in Walk(node, pattern, new StringBuilder(), pattern.Type == PatternMatchType.IsWord ? pattern.Count : 0, 0))
+            foreach (var word in Walk(ref node, pattern, new StringBuilder(), pattern.Type == PatternMatchType.IsWord ? pattern.Count : 0, 0))
             {
                 yield return word;
             }
@@ -170,7 +170,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     {
         ArgumentException.ThrowIfNullOrEmpty(fragment);
         var nodeIndexes = new int[fragment.Length];
-        var node = mRoot;
+        ref var node = ref mRoot;
 
         bool deleteAndTrim()
         {
@@ -196,13 +196,13 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
         Array.Fill(nodeIndexes, -1);
         for (var i = 0; i < fragment.Length; i++)
         {
-            var curIdx = Search(ref node.Children, 0, node.Children.Length - 1, fragment[i]);
+            var curIdx = Find(ref node.Children, 0, node.Children.Length - 1, fragment[i]);
             if (curIdx < 0)
             {
                 return false;
             }
             nodeIndexes[i] = curIdx;
-            node = node.Children[curIdx];
+            node = ref node.Children[curIdx];
         }
         if (isPrefix)
         {
@@ -350,7 +350,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
         }
         else
         {
-            idx = Search(ref parentNode.Children, 0, parentNode.Children.Length - 1, character);
+            idx = Find(ref parentNode.Children, 0, parentNode.Children.Length - 1, character);
             if (idx < 0)
             {
                 parentNode.Children = [.. parentNode.Children, new TrieNode()];
@@ -397,13 +397,13 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// Walks depth-first through the tree starting at the given <see cref="TrieNode"/> and returns every <see cref="TrieNode"/> that is encountered.
     /// </summary>
     /// <returns>An <see cref="IEnumerable{TrieNode}"/></returns>
-    internal static List<TrieNode> Walk(TrieNode node)
+    internal static List<TrieNode> Walk(ref TrieNode node)
     {
         var nodes = new List<TrieNode>([node]);
 
         for (var i = 0; i < node.Children.Length; i++)
         {
-            foreach (var c in Walk(node.Children[i]))
+            foreach (var c in Walk(ref node.Children[i]))
             {
                nodes.Add(c);
             }
@@ -416,7 +416,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// </summary>
     /// <param name="node">The <see cref="TrieNode"/> to start from</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
-    private static List<string> Walk(TrieNode node, StringBuilder buffer)
+    private static List<string> Walk(ref TrieNode node, StringBuilder buffer)
     {
         var words = new List<string>();
 
@@ -427,7 +427,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
         for (var i = 0; i < node.Children.Length; i++)
         {
             buffer.Append(node.Children[i].Character);
-            foreach (var word in Walk(node.Children[i], buffer))
+            foreach (var word in Walk(ref node.Children[i], buffer))
             {
                 words.Add(word);
             }
@@ -443,13 +443,13 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
-    private static List<string> Walk(TrieNode node, PatternMatch pattern, StringBuilder buffer, int length, int matchCount)
+    private static List<string> Walk(ref TrieNode node, PatternMatch pattern, StringBuilder buffer, int length, int matchCount)
     {
         var words = new List<string>();
 
         if (matchCount == pattern.Count) // all words in this subtree are a match for prefix pattern types, and for word pattern type if word length matches as well
         {
-            foreach (var word in Walk(node, buffer))
+            foreach (var word in Walk(ref node, buffer))
             {
                 if (pattern.Type != PatternMatchType.IsWord || word.Length == length)
                 {
@@ -466,7 +466,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
                 buffer.Append(node.Children[i].Character);
                 if (curMatch.IsMatch(node.Children[i].Character)) // keep matching
                 {
-                    foreach (var word in Walk(node.Children[i], pattern, buffer, length, matchCount + 1))
+                    foreach (var word in Walk(ref node.Children[i], pattern, buffer, length, matchCount + 1))
                     {
                         words.Add(word);
                     }
@@ -546,7 +546,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
         {
             if (matchCount == pattern.Count) // all words in this subtree are a match
             {
-                foreach (var word in Walk(node, buffer))
+                foreach (var word in Walk(ref node, buffer))
                 {
                     words.Add(word);
                 }
@@ -600,7 +600,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     private static bool Delete(ref TrieNode[] nodes, char character)
     {
         var n = nodes.Length - 1;
-        var pos = Search(ref nodes, 0, n, character);
+        var pos = Find(ref nodes, 0, n, character);
 
         if (pos >= 0)
         {
@@ -618,24 +618,6 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     }
 
     /// <summary>
-    /// Inserts the given <see cref="TrieNode"/> at the correct position in the given Array and returns its index.
-    /// </summary>
-    /// <param name="nodes">The <see cref="TrieNode[]"/> in which to insert the node</param>
-    /// <param name="node">The <see cref="TrieNode"/></param>
-    /// <returns>The index of the inserted <see cref="TrieNode"/></returns>
-    private static int Insert(ref TrieNode[] nodes, TrieNode node)
-    {
-        var n = nodes.Length - 1;
-        int i;
-        for (i = n - 1; i >= 0 && nodes[i].Character > node.Character; i--)
-        {
-            nodes[i + 1] = nodes[i];
-        }
-        nodes[i + 1] = node;
-        return i + 1;
-    }
-
-    /// <summary>
     /// Returns the index of the <see cref="TrieNode"/> representing the given character in the given array of <see cref="TrieNode"/>s if it exists. If it doesn't, -1 is returned.
     /// </summary>
     /// <param name="nodes">The <see cref="TrieNode"/> array in which to search</param>
@@ -643,7 +625,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// <param name="high">The upper bound of the search range</param>
     /// <param name="character">The character for which to find the <see cref="TrieNode"/></param>
     /// <returns>The index of the node that represents this character if it exists, else -1</returns>
-    internal static int Search(ref TrieNode[] nodes, int low, int high, char character)
+    internal static int Find(ref TrieNode[] nodes, int low, int high, char character)
     {
         while (low <= high)
         {
@@ -664,6 +646,24 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
             }
         }
         return -1;
+    }
+
+    /// <summary>
+    /// Inserts the given <see cref="TrieNode"/> at the correct position in the given Array and returns its index.
+    /// </summary>
+    /// <param name="nodes">The <see cref="TrieNode[]"/> in which to insert the node</param>
+    /// <param name="node">The <see cref="TrieNode"/></param>
+    /// <returns>The index of the inserted <see cref="TrieNode"/></returns>
+    private static int Insert(ref TrieNode[] nodes, TrieNode node)
+    {
+        var n = nodes.Length - 1;
+        int i;
+        for (i = n - 1; i >= 0 && nodes[i].Character > node.Character; i--)
+        {
+            nodes[i + 1] = nodes[i];
+        }
+        nodes[i + 1] = node;
+        return i + 1;
     }
 
     #endregion

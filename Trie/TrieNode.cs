@@ -154,7 +154,7 @@ public struct TrieNode() : IComparable<TrieNode>, IEquatable<TrieNode>
     /// <returns>A <see cref="TrieNode"/> if it exists; else <see langword="null"/></returns>
     private TrieNode? GetNode(char character)
     {
-        var idx = Trie.Search(ref Children, 0, Children.Length - 1, character);
+        var idx = Trie.Find(ref Children, 0, Children.Length - 1, character);
         return idx < 0 ? null : Children[idx];
     }
 
