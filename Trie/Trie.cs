@@ -57,9 +57,13 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// Adds the given word to the collection.
     /// </summary>
     /// <param name="word">The word to add</param>
+    /// <exception cref="ArgumentException">The word is <see langword="null"/> or empty</exception>
+    /// <exception cref="NotSupportedException">The word is longer than 255 characters</exception>
     public void Add(string word)
     {
         ArgumentException.ThrowIfNullOrEmpty(word);
+        if (word.Length > 255) { throw new NotSupportedException(nameof(word)); }
+
         var nodeIndexes = new int[word.Length];
         Array.Fill(nodeIndexes, -1);
 
@@ -87,6 +91,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// <param name="word">The word to find</param>
     /// <param name="isPrefix">If <see langword="true"/> return <see langword="true"/> if words starting with the given word exist, else only return <see langword="true"/> if an exact match is present</param>
     /// <returns>Boolean, <see langword="true"/> if the word exists in this <see cref="Trie"/></returns>
+    /// <exception cref="ArgumentException">The word is <see langword="null"/> or empty</exception>
     public bool Contains(string word, bool isPrefix)
     {
         ArgumentException.ThrowIfNullOrEmpty(word, nameof(word));
@@ -166,6 +171,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// </summary>
     /// <param name="fragment">The fragment to match</param>
     /// <param name="isPrefix">If <see langword="true"/>, the word should start with this fragment</param>
+    /// <exception cref="ArgumentException">The fragment is <see langword="null"/> or empty</exception>
     public bool Remove(string fragment, bool isPrefix)
     {
         ArgumentException.ThrowIfNullOrEmpty(fragment);
@@ -181,7 +187,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
             nodeIndexes[^1] = -1; // need reference to last node's parent
             ref var lastParent = ref GetNode(ref nodeIndexes);
             var n = nodeIndexes.Length - 1;
-            lastParent.RemainingDepth = -1; // force recalculation
+            lastParent.ResetDepth(); // force recalculation
             if (Delete(ref lastParent.Children, fragment[n]))
             {
                 if (lastParent.Children.Length == 0) // delete and trim parent
@@ -420,7 +426,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     {
         var words = new List<string>();
 
-        if (node.IsWord)
+        if (node.IsWord && !node.IsVisited)
         {
             words.Add(buffer.ToString());
         }
@@ -433,6 +439,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
             }
             buffer.Length--;
         }
+        node.IsVisited = true;
         return words;
     }
 
@@ -484,16 +491,21 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
     /// <param name="matchCount">The number of positive matches sofar</param>
+    /// <param name="isRetry">Flag to signify not to set <see cref="TrieNode.IsVisited"/> to false</param>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
     private static List<string> WalkContaining(ref TrieNode node, PatternMatch pattern, StringBuilder buffer, int matchCount, bool isRetry = false)
     {
         var words = new List<string>();
 
+        if (!isRetry)
+        {
+            node.IsVisited = false;
+        }
         if (!node.IsVisited)
         {
             if (node.RemainingDepth >= pattern.Count)
             {
-                var curMatch = pattern[0];
+                var curMatch = pattern[matchCount];
                 for (var i = 0; i < node.Children.Length; i++)
                 {
                     ref var child = ref node.Children[i];
@@ -507,14 +519,14 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
                         buffer.Append(child.Character);
                         if (curMatch.IsMatch(child.Character)) // char is a match; try to match remaining strings to remaining pattern if possible
                         {
-                            foreach (var word in WalkWithRetry(ref child, ref child, pattern, buffer, matchCount + 1)) // keep matching
+                            foreach (var word in WalkWithRetry(ref child, ref child, pattern, buffer, matchCount + 1, isRetry)) // keep matching
                             {
                                 words.Add(word);
                             }
                         }
                         else // look deeper in the branch
                         {
-                            foreach (var word in WalkContaining(ref child, pattern, buffer, 0))
+                            foreach (var word in WalkContaining(ref child, pattern, buffer, matchCount, isRetry))
                             {
                                 words.Add(word);
                             }
@@ -530,18 +542,23 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
 
     /// <summary>
     /// Tries to retrieve all words that match the given <see cref="PatternMatch"/> starting from the given <see cref="TrieNode"/>.
-    /// When a 'chain' of matchings breaks, matching will start over from the children of the node that was the first match.
+    /// When a 'chain' of matchings breaks, matching will start over from the children of the node that was the previous match.
     /// </summary>
     /// <param name="node">The <see cref="TrieNode"/> to start from</param>
-    /// <param name="firstMatch">The <see cref="TrieNode"/> that represents the first matching character</param>
+    /// <param name="previousMatch">The <see cref="TrieNode"/> that represents the previous matching character</param>
     /// <param name="pattern">The <see cref="PatternMatch"/> to use</param>
     /// <param name="buffer">The <see cref="StringBuilder"/> to (re)use</param>
     /// <param name="matchCount">The number of positive matches sofar</param>
+    /// <param name="isRetry">Flag to signify not to set <see cref="TrieNode.IsVisited"/> to false</param>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
-    private static List<string> WalkWithRetry(ref TrieNode node, ref TrieNode firstMatch, PatternMatch pattern, StringBuilder buffer, int matchCount)
+    private static List<string> WalkWithRetry(ref TrieNode node, ref TrieNode previousMatch, PatternMatch pattern, StringBuilder buffer, int matchCount, bool isRetry = false)
     {
         var words = new List<string>();
 
+        if (!isRetry)
+        {
+            node.IsVisited = false;
+        }
         if (!node.IsVisited)
         {
             if (matchCount == pattern.Count) // all words in this subtree are a match
@@ -559,32 +576,37 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
                 {
                     ref var child = ref node.Children[i];
 
-                    child.IsVisited = false;
-                    buffer.Append(child.Character);
-                    if (curMatch.IsMatch(child.Character)) // keep matching
+                    if (!isRetry)
                     {
-                        foreach (var word in WalkWithRetry(ref child, ref firstMatch, pattern, buffer, matchCount + 1))
-                        {
-                            words.Add(word);
-                        }
+                        child.IsVisited = false;
                     }
-                    else // start over from the children of the first matching node
+                    if (!child.IsVisited)
                     {
-                        if (!firstMatch.IsVisited)
+                        buffer.Append(child.Character);
+                        if (curMatch.IsMatch(child.Character)) // keep matching
                         {
-                            var retryBuffer = new StringBuilder(buffer.ToString()[..(buffer.Length - matchCount)]);
-
-                            foreach (var word in WalkContaining(ref firstMatch, pattern, retryBuffer, 0, true))
+                            foreach (var word in WalkWithRetry(ref child, ref node, pattern, buffer, matchCount + 1, isRetry))
                             {
                                 words.Add(word);
                             }
-                            firstMatch.IsVisited = true;
                         }
+                        else // start over from the children of the previous matching node
+                        {
+                            if (!previousMatch.IsVisited)
+                            {
+                                var retryBuffer = new StringBuilder(buffer.ToString()[..(buffer.Length - matchCount)]);
+
+                                foreach (var word in WalkContaining(ref previousMatch, pattern, retryBuffer, 0, true))
+                                {
+                                    words.Add(word);
+                                }
+                            }
+                        }
+                        buffer.Length--;
                     }
-                    buffer.Length--;
                 }
-                node.IsVisited = true;
             }
+            node.IsVisited = true;
         }
         return words;
     }
