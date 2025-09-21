@@ -134,7 +134,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
         ref var node = ref mRoot;
 
         node.IsVisited = false;
-        if (pattern.Type == PatternMatchType.IsFragment)
+        if (pattern.MatchType == PatternMatchType.IsFragment)
         {
             foreach (var word in WalkContaining(ref node, pattern, new StringBuilder(), 0))
             {
@@ -143,7 +143,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
         }
         else
         {
-            foreach (var word in Walk(ref node, pattern, new StringBuilder(), pattern.Type == PatternMatchType.IsWord ? pattern.Count : 0, 0))
+            foreach (var word in Walk(ref node, pattern, new StringBuilder(), pattern.MatchType == PatternMatchType.IsWord ? pattern.Count : 0, 0))
             {
                 yield return word;
             }
@@ -458,7 +458,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
         {
             foreach (var word in Walk(ref node, buffer))
             {
-                if (pattern.Type != PatternMatchType.IsWord || word.Length == length)
+                if (pattern.MatchType != PatternMatchType.IsWord || word.Length == length)
                 {
                     words.Add(word);
                 }

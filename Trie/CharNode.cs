@@ -1,5 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
+using BlueHeron.Collections.Trie.Search;
 
 namespace BlueHeron.Collections.Trie;
 
@@ -8,11 +8,19 @@ namespace BlueHeron.Collections.Trie;
 /// </summary>
 /// <param name="character">The unicode character to be represented by the node</param>
 [StructLayout(LayoutKind.Sequential)]
-public readonly struct CharNode(char character) : IComparable<CharNode>, IEquatable<CharNode>
+public struct CharNode(char character) : IComparable<CharNode>, IEquatable<CharNode>
 {
     #region Properties
 
+    /// <summary>
+    /// Gets the unicode character represented by this <see cref="CharNode"/>.
+    /// </summary>
     public readonly char Character = character;
+
+    /// <summary>
+    /// Gets the maximum depth of this <see cref="CharNode"/>'s tree of children.
+    /// </summary>
+    public byte RemainingDepth { readonly get; internal set; }
 
     #endregion
 
@@ -131,6 +139,9 @@ public class CharTrie
 
     #region Construction
 
+    /// <summary>
+    /// Creates a new <see cref="CharTrie"/>.
+    /// </summary>
     public CharTrie()
     {
         mNodes = new CharNode[1]; // start with 1 node (root)
@@ -146,21 +157,35 @@ public class CharTrie
 
     #region Properties
 
+    /// <summary>
+    /// Gets the number of nodes in this <see cref="CharTrie"/>.
+    /// </summary>
+    public int NumNodes => mNodeCount;
 
+    /// <summary>
+    /// Gets the number of words in this <see cref="CharTrie"/>.
+    /// </summary>
+    public int NumWords => mIsWordEnd.Length;
 
     #endregion
 
     #region Public methods and functions
 
+    /// <summary>
+    /// Adds the given word to the <see cref="CharTrie"/>.
+    /// </summary>
+    /// <param name="word">The word to add</param>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="word"/> is <see langword="null"/> or empty</exception>
     public void Add(string word)
     {
         ArgumentException.ThrowIfNullOrEmpty(word);
 
         var current = 0; // index of root node
 
-        foreach (var c in word)
+        for (var charIndex = 0; charIndex < word.Length; charIndex++)
         {
             var next = -1;
+            var c = word[charIndex];
 
             for (var i = 0; i < mChildren[current].Length; i++) // search for existing child
             {
@@ -190,11 +215,16 @@ public class CharTrie
                 updated[^1] = next; // add index of new child at the end
                 mChildren[current] = updated;
             }
+            mNodes[current].RemainingDepth = (byte)Math.Max(mNodes[current].RemainingDepth, word.Length - charIndex);
             current = next;
         }
         mIsWordEnd[current] = true;
     }
 
+    /// <summary>
+    /// Returns all words in the <see cref="CharTrie"/>.
+    /// </summary>
+    /// <returns>An <see cref="IEnumerable{string}"/></returns>
     public IEnumerable<string> All()
     {
         foreach (var word in Walk(0, string.Empty))
@@ -203,36 +233,72 @@ public class CharTrie
         }
     }
 
-    public bool StartsWith(string prefix)
+    /// <summary>
+    /// Returns an enumerable collection of words that match the specified <see cref="PatternMatch"/>.
+    /// </summary>
+    /// <param name="pattern">The <see cref="PatternMatch"/> to match. if <see langword="null"/> or empty, all words will be returned.</param>
+    /// <returns>An enumerable collection of strings containing all words that match the given <see cref="PatternMatch"/>. The collection is empty if no words match.</returns>
+    public IEnumerable<string> Containing(PatternMatch pattern)
     {
-        ArgumentException.ThrowIfNullOrEmpty(prefix);
-
-        var current = 0;
-        foreach (var c in prefix)
+        if (pattern == null || pattern.Count == 0) // 
         {
-            var found = false;
-            for (var i = 0; i < mChildren[current].Length; i++)
+            foreach (var word in All())
             {
-                var childIndex = mChildren[current][i];
-                if (mNodes[childIndex].Character == c)
-                {
-                    current = childIndex;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-            {
-                return false;
+                yield return word;
             }
         }
-        return true;
+        else
+        {
+            switch (pattern.MatchType)
+            {
+                case PatternMatchType.IsPrefix:
+                    var current = 0;
+                    var prefix = string.Empty;
+
+                    foreach (var c in pattern)
+                    {
+                        var found = false;
+                        for (var i = 0; i < mChildren[current].Length; i++)
+                        {
+                            var childIndex = mChildren[current][i];
+                            if (c.IsMatch(mNodes[childIndex].Character))
+                            {
+                                prefix += mNodes[childIndex].Character;
+                                current = childIndex;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found)
+                        {
+                            yield break; // no words with this prefix
+                        }
+                    }
+                    foreach (var word in Walk(current, prefix[..^1])) // the last prefix character is represented by current
+                    {
+                        yield return word;
+                    }
+                    break;
+                case PatternMatchType.IsSuffix:
+                    throw new NotImplementedException("Suffix search is not implemented yet.");
+                case PatternMatchType.IsFragment:
+                    throw new NotImplementedException("Fragment search is not implemented yet.");
+                case PatternMatchType.IsWord:
+                    throw new NotImplementedException("Exact word search is not implemented yet.");
+            }
+        }
     }
 
     #endregion
 
     #region Private methods and functions
 
+    /// <summary>
+    /// Recursively walks the trie from the given index, yielding all words found that match the prefix followed by the character represented by the <see cref="CharNode"/> at the given index.
+    /// </summary>
+    /// <param name="index">The index of the <see cref="CharNode"/> to start from</param>
+    /// <param name="prefix">The characters already added to the output</param>
+    /// <returns>An <see cref="IEnumerable{string}"/></returns>
     private IEnumerable<string> Walk(int index, string prefix)
     {
         if (index != 0)

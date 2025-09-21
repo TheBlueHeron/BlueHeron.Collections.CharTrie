@@ -20,7 +20,7 @@ public class PatternMatch : List<CharMatch>
     /// <summary>
     /// Gets or sets the <see cref="PatternMatchType"/> to use. Default: <see cref="PatternMatchType.IsPrefix"/>.
     /// </summary>
-    public PatternMatchType Type { get; set; }
+    public PatternMatchType MatchType { get; set; }
 
     /// <summary>
     /// Gets the regex expression for this <see cref="PatternMatch"/>.
@@ -50,7 +50,7 @@ public class PatternMatch : List<CharMatch>
         {
             throw new ArgumentException(errNoFirstOrLastWildCard);
         }
-        Type = type;
+        MatchType = type;
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ public class PatternMatch : List<CharMatch>
         {
             throw new ArgumentException(errNoFirstOrLastWildCard);
         }
-        Type = type;
+        MatchType = type;
     }
 
     #endregion
@@ -143,7 +143,7 @@ public class PatternMatch : List<CharMatch>
         }
         var strRegex = string.Join(string.Empty, this.Select(c => c.ToString()));
 
-        return Type switch
+        return MatchType switch
         {
             PatternMatchType.IsWord => strRegex,
             PatternMatchType.IsFragment => _DOTSTAR + strRegex + _DOTSTAR,
