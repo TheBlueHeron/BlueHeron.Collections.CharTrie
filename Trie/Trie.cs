@@ -57,9 +57,13 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// Adds the given word to the collection.
     /// </summary>
     /// <param name="word">The word to add</param>
+    /// <exception cref="ArgumentException">The word is <see langword="null"/> or empty</exception>
+    /// <exception cref="NotSupportedException">The word is longer than 255 characters</exception>
     public void Add(string word)
     {
         ArgumentException.ThrowIfNullOrEmpty(word);
+        if (word.Length > 255) { throw new NotSupportedException(nameof(word)); }
+
         var nodeIndexes = new int[word.Length];
         Array.Fill(nodeIndexes, -1);
 
@@ -166,6 +170,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
     /// </summary>
     /// <param name="fragment">The fragment to match</param>
     /// <param name="isPrefix">If <see langword="true"/>, the word should start with this fragment</param>
+    /// <exception cref="ArgumentException">The fragment is <see langword="null"/> or empty</exception>
     public bool Remove(string fragment, bool isPrefix)
     {
         ArgumentException.ThrowIfNullOrEmpty(fragment);
@@ -181,7 +186,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
             nodeIndexes[^1] = -1; // need reference to last node's parent
             ref var lastParent = ref GetNode(ref nodeIndexes);
             var n = nodeIndexes.Length - 1;
-            lastParent.RemainingDepth = -1; // force recalculation
+            lastParent.ResetDepth(); // force recalculation
             if (Delete(ref lastParent.Children, fragment[n]))
             {
                 if (lastParent.Children.Length == 0) // delete and trim parent
@@ -493,7 +498,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
         {
             if (node.RemainingDepth >= pattern.Count)
             {
-                var curMatch = pattern[0];
+                var curMatch = pattern[matchCount];
                 for (var i = 0; i < node.Children.Length; i++)
                 {
                     ref var child = ref node.Children[i];
@@ -514,7 +519,7 @@ public sealed partial class Trie : IEnumerable, IEnumerable<TrieNode>
                         }
                         else // look deeper in the branch
                         {
-                            foreach (var word in WalkContaining(ref child, pattern, buffer, 0))
+                            foreach (var word in WalkContaining(ref child, pattern, buffer, matchCount))
                             {
                                 words.Add(word);
                             }
