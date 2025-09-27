@@ -48,7 +48,7 @@ internal sealed class NodeDeserializer : JsonConverter<DeserializedNode>
                             break;
                         case _R:
                             reader.Read();
-                            node.RemainingDepth = reader.GetByte();
+                            node.RemainingDepth = reader.GetInt16();
                             break;
                         case _W:
                             reader.Read();

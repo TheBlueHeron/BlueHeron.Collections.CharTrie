@@ -17,7 +17,7 @@ public struct TrieNode() : IComparable<TrieNode>, IEquatable<TrieNode>
     private const byte IsVisitedMask = 1 << 1;  // 0000_0010
 
     private byte mFlags;
-    private byte? mRemainingDepth;
+    private short mRemainingDepth = -1;
 
     #endregion
 
@@ -76,12 +76,15 @@ public struct TrieNode() : IComparable<TrieNode>, IEquatable<TrieNode>
     /// <summary>
     /// Gets the maximum depth of this <see cref="TrieNode"/>'s tree of children.
     /// </summary>
-    public byte RemainingDepth
+    public short RemainingDepth
     {
         get
         {
-            mRemainingDepth ??= CalculateRemainingDepth();
-            return mRemainingDepth.Value;
+            if (mRemainingDepth < 0)
+            {
+                mRemainingDepth = (short)(Children.Length == 0 ? 0 : 1 + Children.Max(n => n.RemainingDepth));
+            }
+            return mRemainingDepth;
         }
         internal set => mRemainingDepth = value;
     }
@@ -135,15 +138,6 @@ public struct TrieNode() : IComparable<TrieNode>, IEquatable<TrieNode>
     #region Private methods and functions
 
     /// <summary>
-    /// Calculates the remaining depth of this sub tree.
-    /// </summary>
-    /// <returns>A <see langword="byte"/> value</returns>
-    internal readonly byte CalculateRemainingDepth()
-    {
-        return (byte)(Children.Length == 0 ? 0 : 1 + Children.Max(n => n.RemainingDepth));
-    }
-
-    /// <summary>
     /// Returns a new <see cref="TrieNode"/>.
     /// </summary>
     /// <param name="character">The character</param>
@@ -162,14 +156,6 @@ public struct TrieNode() : IComparable<TrieNode>, IEquatable<TrieNode>
     {
         var idx = Trie.Find(ref Children, 0, Children.Length - 1, character);
         return idx < 0 ? null : Children[idx];
-    }
-
-    /// <summary>
-    /// Removes the <see cref="RemainingDepth"/> value, forcing a recalculation.
-    /// </summary>
-    internal void ResetDepth()
-    {
-        mRemainingDepth = null;
     }
 
     #endregion
