@@ -1,45 +1,100 @@
-﻿namespace BlueHeron.Collections.Trie;
+﻿using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
+using BlueHeron.Collections.Trie.Search;
+using BlueHeron.Collections.Trie.Serialization;
+
+namespace BlueHeron.Collections.Trie;
 
 /// <summary>
 /// Object that represents a list of words, stored in a Trie structure for efficient lookup.
 /// </summary>
+[JsonConverter(typeof(CharTrieConverter))]
 public sealed class CharTrie
 {
     #region Fields
 
-    private readonly char[] mCharacters;
-    private readonly List<CharNode> mNodes;
-    private List<List<int>> mChildBuffers = []; // temporary per-node child lists
-    private readonly List<int> mChildIndices; // final flattened list
+    internal readonly char[] mCharacters;
+    internal readonly List<CharNode> mNodes;
+    private List<List<int>> mChildBuffers; // temporary per-node child lists
+    internal readonly List<int> mChildIndices; // final flattened list
+
+    /// <summary>
+    /// Represents a character node in the <see cref="CharTrie"/>.
+    /// </summary>
+    [JsonConverter(typeof(CharNodeConverter))]
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct CharNode : IEquatable<CharNode>
+    {
+        [FieldOffset(0)]
+        public int FirstChildIndex;
+        [FieldOffset(4)]
+        public byte CharIndex;
+        [FieldOffset(5)]
+        public byte ChildCount;
+        [FieldOffset(6)]
+        public bool IsWordEnd;
+
+        #region Operators and overrides
+
+        /// <inheritdoc/>
+        public readonly override bool Equals(object? obj) => object.Equals(CharIndex, obj);
+
+        /// <inheritdoc/>
+        public readonly override int GetHashCode() => CharIndex.GetHashCode();
+
+        /// <summary>
+        /// Compares by comparing <see cref="CharIndex"/> values.
+        /// </summary>
+        public static bool operator ==(CharNode left, CharNode right) => left.Equals(right);
+
+        /// <summary>
+        /// Compares by comparing <see cref="CharIndex"/> values.
+        /// </summary>
+        public static bool operator !=(CharNode left, CharNode right) => !(left == right);
+
+        /// <summary>
+        /// Compares by comparing <see cref="CharIndex"/> values.
+        /// </summary>
+        /// <param name="other">The <see cref="CharNode"/> to compare</param>
+        public readonly bool Equals(CharNode other) => CharIndex == other.CharIndex;
+
+        #endregion
+    }
 
     #endregion
 
     #region Construction
 
     /// <summary>
-    /// Creates a new <see cref="CharTrie"/>.
+    /// Creates a new <see cref="CharTrie"/>. Used by <see cref="CharTrieConverter"/>.
+    /// </summary>
+    /// <param name="characters">The array of supported characters</param>
+    /// <param name="nodes">The list of all <see cref="CharNode"/>s in the <see cref="CharTrie"/></param>
+    /// <param name="childIndices">The list of all child node indices</param>
+    /// <param name="numWords">The number of words in the <see cref="Trie"/></param>
+    internal CharTrie(char[] characters, List<CharNode> nodes, List<int> childIndices, int numWords)
+    {
+        mCharacters = characters;
+        mNodes = nodes;
+        mChildIndices = childIndices;
+        Count = numWords;
+        mChildBuffers = null!;
+        IsLocked = true;
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="CharTrie"/>. Used by <see cref="CharTrieFactory"/>.
     /// </summary>
     /// <param name="characters">The array of all distinct characters that are present in the words to be added or imported</param>
     /// <exception cref="ArgumentException">The array must contain at least one character.</exception>
     /// <exception cref="NotSupportedException">The array cannot contain more than 255 characters.</exception>
-    public CharTrie(char[] characters)
+    internal CharTrie(char[] characters)
     {
-        ArgumentNullException.ThrowIfNull(characters);
-        if (characters.Length == 0)
-        {
-            throw new ArgumentException("The array must contain at least one character.", nameof(characters));
-        }
-        if (characters.Length > 255)
-        {
-            throw new NotSupportedException("The array cannot contain more than 255 characters.");
-        }
-        mCharacters = new char[1];
-        mCharacters[0] = '\0'; // root character
-        Array.Resize(ref mCharacters, characters.Length + 1);
-        Array.Copy(characters, 0, mCharacters, 1, characters.Length);
+        mCharacters = characters;
         mChildIndices = [];
         mNodes = [];
         mNodes.Add(new CharNode { CharIndex = 0, FirstChildIndex = 0, ChildCount = 0, IsWordEnd = false }); // Root node (empty character)
+        mChildBuffers = [];
         mChildBuffers.Add([]);
     }
 
@@ -73,41 +128,42 @@ public sealed class CharTrie
     /// <exception cref="ArgumentException">Thrown if <paramref name="word"/> is <see langword="null"/> or empty</exception>
     public void Add(string word)
     {
-        if (IsLocked) { throw new InvalidOperationException("The CharTrie is locked"); };
         ArgumentException.ThrowIfNullOrEmpty(word);
-
-        var currentIndex = 0;
-
-        for (var c = 0; c <= word.Length - 1; c++)
+        if (!IsLocked)
         {
-            var charIndex = (byte)Array.IndexOf(mCharacters, word[c]);
-            var children = mChildBuffers[currentIndex];
-            var foundIndex = -1;
+            var currentIndex = 0;
 
-            foreach (var childIndex in children)
+            for (var c = 0; c <= word.Length - 1; c++)
             {
-                if (mNodes[childIndex].CharIndex == charIndex)
+                var charIndex = GetCharIndex(word[c]);
+                var children = mChildBuffers[currentIndex];
+                var foundIndex = -1;
+
+                foreach (var childIndex in children)
                 {
-                    foundIndex = childIndex;
-                    break;
+                    if (mNodes[childIndex].CharIndex == charIndex)
+                    {
+                        foundIndex = childIndex;
+                        break;
+                    }
                 }
-            }
-            if (foundIndex == -1) // create new node
-            {
-                var newIndex = mNodes.Count;
+                if (foundIndex == -1) // create new node
+                {
+                    var newIndex = mNodes.Count;
 
-                mNodes.Add(new CharNode { CharIndex = charIndex, FirstChildIndex = mChildIndices.Count });
-                mChildBuffers.Add([]);
-                children.Add(newIndex);
-                foundIndex = newIndex;
+                    mNodes.Add(new CharNode { CharIndex = charIndex, FirstChildIndex = mChildIndices.Count });
+                    mChildBuffers.Add([]);
+                    children.Add(newIndex);
+                    foundIndex = newIndex;
 
+                }
+                currentIndex = foundIndex;
             }
-            currentIndex = foundIndex;
+            var terminalNode = mNodes[currentIndex];
+            terminalNode.IsWordEnd = true;
+            mNodes[currentIndex] = terminalNode; // update terminal node
+            Count++;
         }
-        var terminalNode = mNodes[currentIndex];
-        terminalNode.IsWordEnd = true;
-        mNodes[currentIndex] = terminalNode; // update terminal node
-        Count++;
     }
 
     /// <summary>
@@ -140,7 +196,7 @@ public sealed class CharTrie
 
         for (var c = 0; c < word.Length; c++)
         {
-            var charIndex = (byte)Array.IndexOf(mCharacters, word[c]);
+            var charIndex = GetCharIndex(word[c]);
             var childStart = mNodes[currentIndex].FirstChildIndex;
             var childCount = mNodes[currentIndex].ChildCount;
             var found = false;
@@ -165,9 +221,27 @@ public sealed class CharTrie
     }
 
     /// <summary>
-    /// Optimizes the <see cref="CharTrie"/> by flattening the child node lists and preventing further additions.
+    /// Returns all words that match the given <see cref="PatternMatch"/>.
     /// </summary>
-    public void FinalizeTrie()
+    /// <param name="pattern">The <see cref="PatternMatch"/> to evaluate</param>
+    /// <returns>An <see cref="IEnumerable{string}"/> containing all matching words</returns>
+    public IEnumerable<string> Find(PatternMatch pattern)
+    {
+        ArgumentNullException.ThrowIfNull(pattern, nameof(pattern));
+
+        if (pattern.MatchType == PatternMatchType.IsPrefix)
+        {
+
+        }
+        return [];
+    }
+
+    /// <summary>
+    /// Optimizes the <see cref="CharTrie"/> by flattening the child node lists and preventing further additions.
+    /// Optionally, the <see cref="Trie"/> will be sorted alphabetically. This is needed only when words were not added to the <see cref="Trie"/> in alphabetic order.
+    /// </summary>
+    /// <param name="sort"></param>If <see langword="true"/>, child nodes are alphabetically before flattening</param>
+    public void Prune(bool sort = false)
     {
         mChildIndices.Clear();
         for (var i = 0; i < mNodes.Count; i++)
@@ -175,6 +249,10 @@ public sealed class CharTrie
             var children = mChildBuffers[i];
             var node = mNodes[i];
 
+            if (sort)
+            {
+                children.Sort((a, b) => mNodes[a].CharIndex.CompareTo(mNodes[b].CharIndex));
+            }
             node.FirstChildIndex = mChildIndices.Count;
             node.ChildCount = (byte)children.Count;
             mNodes[i] = node; // update node
@@ -185,13 +263,16 @@ public sealed class CharTrie
         IsLocked = true;
     }
 
+    #endregion
+
+    #region Private methods and functions
 
     /// <summary>
     /// Returns all words matching the given prefix.
     /// </summary>
     /// <param name="prefix">The prefix to match. If <see langword="null"/> or empty, all words are returned</param>
     /// <returns>A <see cref="List{string}"/> containing all words that match the prefix</returns>
-    public IEnumerable<string> Get(string prefix)
+    private IEnumerable<string> Find(string prefix)
     {
         if (string.IsNullOrEmpty(prefix))
         {
@@ -202,7 +283,7 @@ public sealed class CharTrie
 
         for (var c = 0; c < prefix.Length; c++)
         {
-            var charIndex = (byte)Array.IndexOf(mCharacters, prefix[c]);
+            var charIndex = GetCharIndex(prefix[c]);
             var firstChildIndex = mNodes[currentIndex].FirstChildIndex;
             var found = false;
 
@@ -226,10 +307,35 @@ public sealed class CharTrie
         return results;
     }
 
+    /// <summary>
+    /// Returns the index of the given character in the characters array.
+    /// </summary>
+    /// <param name="character">The character for which to find the index</param>
+    /// <returns>The index of the character if it exists, else -1</returns>
+    private byte GetCharIndex(char character)
+    {
+        var low = 0;
+        var high = mCharacters.Length - 1;
+        while (low <= high) // reduce number of equality operations significantly by playing the higher/lower game (e.g. 100 chars; average num is reduced from 50 to about 7).
+        {                   // this function assumes that the characters array is sorted!
+            var mid = low + (high - low) / 2;
+            var midChar = mCharacters[mid];
 
-    #endregion
-
-    #region Private methods and functions
+            if (character == midChar)
+            {
+                return (byte)mid;
+            }
+            else if (character < midChar)
+            {
+                high = mid - 1;
+            }
+            else
+            {
+                low = mid + 1;
+            }
+        }
+        throw new NotSupportedException(nameof(character));
+    }
 
     /// <summary>
     /// Returns all words in the <see cref="CharTrie"/> starting from the given node index and using the given prefix.
