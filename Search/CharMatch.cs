@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace BlueHeron.Collections.Trie.Search;
@@ -28,6 +27,12 @@ public class CharMatch
     /// </summary>
     [JsonPropertyName("a")]
     public IReadOnlyList<char>? Alternatives { get; }
+
+    /// <summary>
+    /// Returns a boolean, determining whether this <see cref="CharMatch"/> represents a wildcard.
+    /// </summary>
+    [JsonIgnore()]
+    public bool IsWildCard => Primary == null && Alternatives == null;
 
     /// <summary>
     /// Gets the character for which to find a match first.
@@ -78,7 +83,6 @@ public class CharMatch
     /// </summary>
     /// <param name="character">The character to match</param>
     /// <returns><see langword="bool"/>, <see langword="true"/> if the character is a match</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough()]
     public bool IsMatch(char character)
     {
@@ -90,9 +94,8 @@ public class CharMatch
         {
             return true;
         }
-        if (mCheckAlternatives)
+        if (mCheckAlternatives && Alternatives != null)
         {
-#nullable disable
             for (var i = 0; i < Alternatives.Count; i++)
             {
                 if (Alternatives[i] == character)
@@ -100,7 +103,6 @@ public class CharMatch
                     return true;
                 }
             }
-#nullable enable
         }
         return false;
     }

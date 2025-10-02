@@ -72,11 +72,13 @@ public class CharTrieFactory
                     if (!characters.Contains(c))
                     {
                         characters.Add(c);
+                        characters.Sort();
                     }
                 }
             }
             curLine = await reader.ReadLineAsync().ConfigureAwait(false);
         }
+        characters.Sort();
         return new CharTrieFactory([.. characters]);
     }
 
@@ -137,6 +139,7 @@ public class CharTrieFactory
             var characters = new List<char>();
             var words = new List<string>();
             
+            characters.Add('\0'); // root character
             try
             {
                 using var reader = fi.OpenText();
@@ -157,12 +160,14 @@ public class CharTrieFactory
                             if (!characters.Contains(c))
                             {
                                 characters.Add(c);
+                                characters.Sort();
                             }
                         }
                         words.Add(curLine.Trim());
                     }
                     curLine = await reader.ReadLineAsync().ConfigureAwait(false);
                 }
+                characters.Sort();
                 trie = new CharTrie([.. characters]);
                 words.ForEach(w =>
                 {

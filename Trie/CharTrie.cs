@@ -112,12 +112,14 @@ public sealed class CharTrie
     /// </summary>
     public bool IsLocked { get; set; }
 
+#if DEBUG
     /// <summary>
     /// Gets the number of nodes in the <see cref="CharTrie"/>.
     /// </summary>
     public int NumNodes => mNodes.Count;
+#endif
 
-    #endregion
+#endregion
 
     #region Public methods and functions
 
@@ -221,19 +223,41 @@ public sealed class CharTrie
     }
 
     /// <summary>
-    /// Returns all words that match the given <see cref="PatternMatch"/>.
+    /// Returns all words that match the given <see cref="PatternMatch"/>. If the pattern is empty, all words will be returned.
     /// </summary>
     /// <param name="pattern">The <see cref="PatternMatch"/> to evaluate</param>
     /// <returns>An <see cref="IEnumerable{string}"/> containing all matching words</returns>
+    /// <exception cref="ArgumentNullException">Yhe pattern is <see langword="null"/></exception>
     public IEnumerable<string> Find(PatternMatch pattern)
     {
         ArgumentNullException.ThrowIfNull(pattern, nameof(pattern));
-
-        if (pattern.MatchType == PatternMatchType.IsPrefix)
+        
+        if (pattern.Count == 0)
         {
-
+            return All();
         }
-        return [];
+        var results = new List<string>();
+
+        switch (pattern.MatchType)
+        {
+            case PatternMatchType.IsPrefix:
+                FindPrefix(pattern, ref results);
+                break;
+
+            case PatternMatchType.IsWord:
+                FindExact(pattern, ref results);
+                break;
+
+            case PatternMatchType.IsFragment:
+                //FindFragment(pattern, ref results);
+                break;
+
+            case PatternMatchType.IsSuffix:
+                //FindSuffix(pattern, ref results);
+                break;
+        }
+
+        return results;
     }
 
     /// <summary>
@@ -268,6 +292,97 @@ public sealed class CharTrie
     #region Private methods and functions
 
     /// <summary>
+    /// Matches all words that start with the pattern, represented by the given <see cref="PatternMatch"/> and whose length is the same as the pattern length.
+    /// </summary>
+    /// <param name="pattern">The <see cref="PatternMatch"/> to evaluate</param>
+    /// <param name="results">Reference to the result list</param>
+    private void FindExact(PatternMatch pattern, ref List<string> results)
+    {
+        var stack = new Stack<(int nodeIndex, int depth, string word)>();
+
+        for (var i = 0; i < mNodes[0].ChildCount; i++)
+        {
+            var childIdx = mChildIndices[mNodes[0].FirstChildIndex + i];
+            var ch = mCharacters[mNodes[childIdx].CharIndex];
+
+            if (pattern[0].IsMatch(ch))
+            {
+                stack.Push((childIdx, 1, ch.ToString()));
+            }
+        }
+        while (stack.Count > 0)
+        {
+            var (nodeIndex, depth, word) = stack.Pop();
+
+            if (depth == pattern.Count)
+            {
+               if (mNodes[nodeIndex].IsWordEnd)
+                {
+                    results.Add(word);
+                }
+                continue;
+            }
+
+            var charMatch = pattern[depth];
+
+            for (var i = 0; i < mNodes[nodeIndex].ChildCount; i++)
+            {
+                var childIdx = mChildIndices[mNodes[nodeIndex].FirstChildIndex + i];
+                var ch = mCharacters[mNodes[childIdx].CharIndex];
+
+                if (charMatch.IsMatch(ch))
+                {
+                    stack.Push((childIdx, depth + 1, word + ch));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Matches all words that start with the pattern, represented by the given <see cref="PatternMatch"/>.
+    /// </summary>
+    /// <param name="pattern">The <see cref="PatternMatch"/> to evaluate</param>
+    /// <param name="results">Reference to the result list</param>
+    private void FindPrefix(PatternMatch pattern, ref List<string> results)
+    {
+        var stack = new Stack<(int nodeIndex, int depth, string prefix)>();
+
+        for (var i = 0; i < mNodes[0].ChildCount; i++) // step 1: Match first CharMatch against all root children
+        {
+            var childIdx = mChildIndices[mNodes[0].FirstChildIndex + i];
+            var ch = mCharacters[mNodes[childIdx].CharIndex];
+
+            if (pattern[0].IsMatch(ch))
+            {
+                stack.Push((childIdx, 1, ch.ToString()));
+            }
+        }
+        while (stack.Count > 0) // step 2: Traverse pattern
+        {
+            var (nodeIndex, depth, prefix) = stack.Pop();
+
+            if (depth == pattern.Count)
+            {
+                Walk(nodeIndex, prefix, ref results);
+                continue;
+            }
+
+            var charMatch = pattern[depth];
+
+            for (var i = 0; i < mNodes[nodeIndex].ChildCount; i++)
+            {
+                var childIdx = mChildIndices[mNodes[nodeIndex].FirstChildIndex + i];
+                var ch = mCharacters[mNodes[childIdx].CharIndex];
+
+                if (charMatch.IsMatch(ch))
+                {
+                    stack.Push((childIdx, depth + 1, prefix + ch));
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Returns all words matching the given prefix.
     /// </summary>
     /// <param name="prefix">The prefix to match. If <see langword="null"/> or empty, all words are returned</param>
@@ -281,29 +396,27 @@ public sealed class CharTrie
         List<string> results = [];
         var currentIndex = 0;
 
-        for (var c = 0; c < prefix.Length; c++)
+        foreach (var c in prefix)
         {
-            var charIndex = GetCharIndex(prefix[c]);
-            var firstChildIndex = mNodes[currentIndex].FirstChildIndex;
+            var charIndex = GetCharIndex(c);
             var found = false;
-
             for (var i = 0; i < mNodes[currentIndex].ChildCount; i++)
             {
-                var childIndex = mChildIndices[firstChildIndex + i];
-
-                if (mNodes[childIndex].CharIndex == charIndex)
+                var childIdx = mChildIndices[mNodes[currentIndex].FirstChildIndex + i];
+                if (mNodes[childIdx].CharIndex == charIndex)
                 {
-                    currentIndex = childIndex;
+                    currentIndex = childIdx;
                     found = true;
                     break;
                 }
             }
+
             if (!found)
             {
                 return results;
             }
         }
-        Walk(currentIndex, prefix, ref results); // prefix branch has been found; return all words in this branch
+        Walk(currentIndex, prefix, ref results);
         return results;
     }
 
@@ -316,10 +429,13 @@ public sealed class CharTrie
     {
         var low = 0;
         var high = mCharacters.Length - 1;
-        while (low <= high) // reduce number of equality operations significantly by playing the higher/lower game (e.g. 100 chars; average num is reduced from 50 to about 7).
+        int mid;
+        char midChar;
+
+        while (low <= high) // reduce number of equality operations significantly by playing the higher/lower game (e.g. 100 chars -> average number of operations is reduced from 50 to about 7).
         {                   // this function assumes that the characters array is sorted!
-            var mid = low + (high - low) / 2;
-            var midChar = mCharacters[mid];
+            mid = low + (high - low) / 2;
+            midChar = mCharacters[mid];
 
             if (character == midChar)
             {
@@ -327,11 +443,11 @@ public sealed class CharTrie
             }
             else if (character < midChar)
             {
-                high = mid - 1;
+                high = mid - 1; // narrow downwards
             }
             else
             {
-                low = mid + 1;
+                low = mid + 1; // narrow upwards
             }
         }
         throw new NotSupportedException(nameof(character));
