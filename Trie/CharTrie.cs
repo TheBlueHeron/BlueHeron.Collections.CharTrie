@@ -170,6 +170,20 @@ public sealed class CharTrie
     }
 
     /// <summary>
+    /// Adds the given words to the <see cref="CharTrie"/>.
+    /// </summary>
+    /// <param name="words">An <see cref="IEnumerable{string}"/> containing the words to add</param>
+    /// <exception cref="ArgumentNullException"><paramref name="words"/> is <see langword="null"/></exception>
+    public void AddRange(IEnumerable<string> words)
+    {
+        ArgumentNullException.ThrowIfNull(words);
+        foreach (var word in words)
+        {
+            Add(word);
+        }
+    }
+
+    /// <summary>
     /// Returns all words in the <see cref="CharTrie"/>.
     /// </summary>
     /// <returns>An <see cref="IEnumerable{string}"/></returns>
@@ -345,53 +359,12 @@ public sealed class CharTrie
     /// <param name="results">Reference to the result list</param>
     private void FindFragment(PatternMatch pattern, ref List<string> results)
     {
-        //var stack = new Stack<(int nodeIndex, int depth, string matchedPrefix)>();
-
-        //for (var i = 1; i < mNodes.Count; i++)
-        //{
-        //    var ch = mCharacters[mNodes[i].CharIndex];
-
-        //    if (pattern[0].IsMatch(ch))
-        //    {
-        //        stack.Push((i, 1, $"{ch}"));
-        //    }
-        //}
-
-        //while (stack.Count > 0)
-        //{
-        //    var (nodeIndex, depth, matchedPrefix) = stack.Pop();
-
-        //    if (depth == pattern.Count)
-        //    {
-        //        if (mNodes[nodeIndex].IsWordEnd || mNodes[nodeIndex].ChildCount > 0)
-        //        {
-        //            Walk(nodeIndex, matchedPrefix, ref results);
-        //        }
-        //        continue;
-        //    }
-
-        //    var charMatch = pattern[depth];
-
-        //    for (var i = 0; i < mNodes[nodeIndex].ChildCount; i++)
-        //    {
-        //        var childIdx = mChildIndices[mNodes[nodeIndex].FirstChildIndex + i];
-        //        var ch = mCharacters[mNodes[childIdx].CharIndex];
-
-        //        if (charMatch.IsMatch(ch))
-        //        {
-        //            stack.Push((childIdx, depth + 1, matchedPrefix + ch));
-        //        }
-        //    }
-        //}
-
         var stack = new Stack<(int nodeIndex, int depth)>();
-        var buffer = new char[256]; // Adjust if needed
+        var buffer = new char[256];
 
-        // Start from root's children
-        for (var i = 0; i < mNodes[0].ChildCount; i++)
+        for (var i = 0; i < mNodes[0].ChildCount; i++) // start from root's children
         {
             var childIdx = mChildIndices[mNodes[0].FirstChildIndex + i];
-            //buffer[0] = mCharacters[mNodes[childIdx].CharIndex];
             stack.Push((childIdx, 1));
         }
 
