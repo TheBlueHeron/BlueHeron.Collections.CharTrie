@@ -123,6 +123,31 @@ public class CharTrieFactory
     }
 
     /// <summary>
+    /// Serializes the given <see cref="CharTrie"/> asynchronously and returns it as a <see cref="Stream"/>.
+    /// </summary>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
+    /// <returns>A Task, resulting in a <see cref="bool"/> that signifies the success of the operation</returns>
+    /// <exception cref="InvalidOperationException">The file could not be created or written to</exception>
+    public static async Task<Stream> ExportAsync(CharTrie trie, JsonSerializerOptions? options = null)
+    {
+        try
+        {
+            var stream = new MemoryStream();
+
+            using var writer = new StreamWriter(stream);
+            await writer.WriteAsync(JsonSerializer.Serialize(trie, options ?? mSerializerOptions)).ConfigureAwait(false);
+            await writer.FlushAsync().ConfigureAwait(false);
+            writer.Close();
+            stream.Position = 0;
+            return stream;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(string.Format(null, errImpEx, _Export, nameof(trie)), ex);
+        }
+    }
+
+    /// <summary>
     /// Creates a new <see cref="CharTrie"/> and tries to import all words in the given text file asynchronously.
     /// One word per line is expected, whitespace is trimmed and empty lines will be ignored.
     /// The <see cref="CharTrie"/> will not be <see cref="CharTrie.Prune(bool)"/>d. Call this method to finalize the <see cref="CharTrie"/>.
@@ -132,58 +157,69 @@ public class CharTrieFactory
     /// <exception cref="InvalidOperationException">The file could not be opened and read as a text file.</exception>
     public static async Task<CharTrie?> ImportAsync(FileInfo fi)
     {
+        ArgumentNullException.ThrowIfNull(fi, nameof(fi));
+        return await ImportAsync(fi.Open(FileMode.Open, FileAccess.Read, FileShare.Read)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="CharTrie"/> and tries to import all words in the given <see cref="Stream"/> asynchronously.
+    /// One word per line is expected, whitespace is trimmed and empty lines will be ignored.
+    /// The <see cref="CharTrie"/> will not be <see cref="CharTrie.Prune(bool)"/>d. Call this method to finalize the <see cref="CharTrie"/>.
+    /// </summary>
+    /// <param name="stream">The <see cref="Stream"/> containing the word list</param>
+    /// <returns>A Task, resulting in a <see cref="CharTrie"/> if successful; else <see langword="null"/></returns>
+    /// <exception cref="InvalidOperationException">The stream could not be opened and read as text</exception>
+    public static async Task<CharTrie?> ImportAsync(Stream stream)
+    {
         CharTrie? trie = null;
 
-        if (fi != null && fi.Exists)
+        var characters = new List<char>();
+        var words = new List<string>();
+
+        characters.Add('\0'); // root character
+        try
         {
-            var characters = new List<char>();
-            var words = new List<string>();
-            
-            characters.Add('\0'); // root character
-            try
-            {
-                using var reader = fi.OpenText();
-                var curLine = await reader.ReadLineAsync().ConfigureAwait(false);
+            using var reader = new StreamReader(stream);
+            var curLine = await reader.ReadLineAsync().ConfigureAwait(false);
 #if DEBUG
                 var numLinesRead = 0;
                 var numLinesAdded = 0;
 #endif
-                while (curLine != null)
-                {
+            while (curLine != null)
+            {
 #if DEBUG
                     numLinesRead++;
 #endif
-                    if (curLine.Length > 0)
-                    {
-                        foreach (var c in curLine)
-                        {
-                            if (!characters.Contains(c))
-                            {
-                                characters.Add(c);
-                                characters.Sort();
-                            }
-                        }
-                        words.Add(curLine.Trim());
-                    }
-                    curLine = await reader.ReadLineAsync().ConfigureAwait(false);
-                }
-                characters.Sort();
-                trie = new CharTrie([.. characters]);
-                words.ForEach(w =>
+                if (curLine.Length > 0)
                 {
-                    trie.Add(w);
+                    foreach (var c in curLine)
+                    {
+                        if (!characters.Contains(c))
+                        {
+                            characters.Add(c);
+                            characters.Sort();
+                        }
+                    }
+                    words.Add(curLine.Trim());
+                }
+                curLine = await reader.ReadLineAsync().ConfigureAwait(false);
+            }
+            characters.Sort();
+            trie = new CharTrie([.. characters]);
+            words.ForEach(w =>
+            {
+                trie.Add(w);
 #if DEBUG
                     numLinesAdded++;
 #endif
-                });
+            });
 #if DEBUG
                 Debug.WriteLine("Lines read: {0} | Lines added: {1}.", numLinesRead, numLinesAdded);
 #endif
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException(string.Format(null, errImpEx, _Import, fi.FullName), ex);
-            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(string.Format(null, errImpEx, _Import, nameof(stream)), ex);
         }
         return trie;
     }
@@ -197,21 +233,38 @@ public class CharTrieFactory
     /// <exception cref="InvalidOperationException">The file could not be opened and read as a text file or its contents could not be parsed into a <see cref="CharTrie"/>.</exception>
     public static async Task<CharTrie?> LoadAsync(FileInfo fi, JsonSerializerOptions? options = null)
     {
-        CharTrie? trie = null;
-
         if (fi != null && fi.Exists)
         {
             try
             {
                 using var stream = fi.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
-                trie = await JsonSerializer.DeserializeAsync<CharTrie>(stream, options ?? mSerializerOptions).ConfigureAwait(false);
+                return await JsonSerializer.DeserializeAsync<CharTrie>(stream, options ?? mSerializerOptions).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException(string.Format(null, errImpEx, _Import, fi.FullName), ex);
             }
         }
-        return trie;
+        return null;
+    }
+
+    /// <summary>
+    /// Creates a <see cref="CharTrie"/> from the given <see cref="Stream"/> asynchronously.
+    /// </summary>
+    /// <param name="stream">The <see cref="Stream"/>, containing the serialized <see cref="CharTrie"/></param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use</param>
+    /// <returns>A Task, resulting in a <see cref="CharTrie"/> if successful; else <see langword="null"/></returns>
+    /// <exception cref="InvalidOperationException">The file could not be opened and read as a text file or its contents could not be parsed into a <see cref="CharTrie"/>.</exception>
+    public static async Task<CharTrie?> LoadAsync(Stream stream, JsonSerializerOptions? options = null)
+    {
+        try
+        {
+            return await JsonSerializer.DeserializeAsync<CharTrie>(stream, options ?? mSerializerOptions).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(string.Format(null, errImpEx, _Import, nameof(stream)), ex);
+        }
     }
 
     #endregion
