@@ -133,11 +133,11 @@ public class CharTrieFactory
         try
         {
             var stream = new MemoryStream();
-
-            using var writer = new StreamWriter(stream);
+            using var writer = new StreamWriter(stream, leaveOpen: true);
+            
             await writer.WriteAsync(JsonSerializer.Serialize(trie, options ?? mSerializerOptions)).ConfigureAwait(false);
             await writer.FlushAsync().ConfigureAwait(false);
-            writer.Close();
+
             stream.Position = 0;
             return stream;
         }
