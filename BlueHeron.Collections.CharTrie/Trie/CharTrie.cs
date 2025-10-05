@@ -18,6 +18,7 @@ public sealed class CharTrie
     internal readonly List<CharNode> mNodes;
     private List<List<int>> mChildBuffers; // temporary per-node child lists
     internal readonly List<int> mChildIndices; // final flattened list
+    private Dictionary<string, int> mSubTrees = []; // temporary subtree dictionary
 
     // Fast map from Unicode codepoint (char) to character index in mCharacters
     // 0xFF: invalid
@@ -342,34 +343,141 @@ public sealed class CharTrie
     /// Optimizes the <see cref="CharTrie"/> by flattening the child node lists and preventing further additions.
     /// Optionally, the <see cref="CharTrie"/> will be sorted alphabetically. This is needed only when words were not added to the <see cref="CharTrie"/> in alphabetic order.
     /// </summary>
-    /// <param name="sort"></param>If <see langword="true"/>, child nodes are alphabetically before flattening</param>
-    public void Prune(bool sort = false)
+    /// <param name="sort">If <see langword="true"/>, child nodes are alphabetically before flattening</param>
+    /// <param name="compactToDawg">If <see langword="true"/>, identical subtrees will be merged. This may take a very long time!</param>
+    public void Prune(bool sort = false, bool compactToDawg = true)
     {
-        mChildIndices.Clear();
-        for (var i = 0; i < mNodes.Count; i++)
+        if (!IsLocked)
         {
-            var children = mChildBuffers[i];
-            var node = mNodes[i];
-
-            if (sort)
+            mChildIndices.Clear();
+            for (var i = 0; i < mNodes.Count; i++)
             {
-                children.Sort((a, b) => mNodes[a].CharIndex.CompareTo(mNodes[b].CharIndex));
+                var children = mChildBuffers[i];
+                var node = mNodes[i];
+
+                if (sort)
+                {
+                    children.Sort((a, b) => mNodes[a].CharIndex.CompareTo(mNodes[b].CharIndex));
+                }
+                node.FirstChildIndex = mChildIndices.Count;
+                node.ChildCount = (byte)children.Count;
+                mNodes[i] = node; // update node
+                mChildIndices.AddRange(children);
             }
-            node.FirstChildIndex = mChildIndices.Count;
-            node.ChildCount = (byte)children.Count;
-            mNodes[i] = node; // update node
-            mChildIndices.AddRange(children);
+            mChildBuffers.Clear();
+            mChildBuffers = null!;
+            if (compactToDawg)
+            {
+                CompactToDawg();
+            }
+            mNodes.TrimExcess();
+            mChildIndices.TrimExcess();
+            IsLocked = true;
         }
-        mChildBuffers.Clear();
-        mChildBuffers = null!;
-        mNodes.TrimExcess();
-        mChildIndices.TrimExcess();
-        IsLocked = true;
     }
 
     #endregion
 
     #region Private methods and functions
+
+    private void CompactToDawg()
+    {
+        // 1. merge identical subtrees (longest step)
+        for (var i = mNodes.Count - 1; i >= 0; i--) // traverse nodes from last to first (bottom-up)
+        {
+            var hash = ComputeNodeHash(i);
+            if (mSubTrees.TryGetValue(hash, out var existingIndex))
+            {
+                MergeNodes(i, existingIndex);
+            }
+            else
+            {
+                mSubTrees[hash] = i;
+            }
+        }
+        mSubTrees.Clear();
+        mSubTrees = null!;
+
+        // 2. find all reachable nodes (from root node 0)
+        var reachable = new bool[mNodes.Count];
+        var queue = new Queue<int>();
+
+        queue.Enqueue(0);
+        reachable[0] = true;
+        while (queue.Count > 0)
+        {
+            var nodeIdx = queue.Dequeue();
+            var node = mNodes[nodeIdx];
+            for (var ci = 0; ci < node.ChildCount; ci++)
+            {
+                var childIdx = mChildIndices[node.FirstChildIndex + ci];
+                if (!reachable[childIdx])
+                {
+                    reachable[childIdx] = true;
+                    queue.Enqueue(childIdx);
+                }
+            }
+        }
+
+        // 3. build mapping from old index to new compacted index
+        var oldToNew = new int[mNodes.Count];
+        var newNodeCount = 0;
+        for (var i = 0; i < mNodes.Count; i++)
+        {
+            if (reachable[i])
+            {
+                oldToNew[i] = newNodeCount++;
+            }
+            else
+            {
+                oldToNew[i] = -1;
+            }
+        }
+
+        // 4. Build new node list and child index list
+        var newNodes = new List<CharNode>(newNodeCount);
+        var newChildIndices = new List<int>(mChildIndices.Count); // may shrink
+
+        for (var i = 0; i < mNodes.Count; i++)
+        {
+            if (reachable[i])
+            {
+                var node = mNodes[i];
+                var firstChild = newChildIndices.Count;
+
+                for (var ci = 0; ci < node.ChildCount; ci++) // remap child indices
+                {
+                    var childIdx = mChildIndices[node.FirstChildIndex + ci];
+                    newChildIndices.Add(oldToNew[childIdx]);
+                }
+                node.FirstChildIndex = firstChild; // update node's FirstChildIndex to new location
+                newNodes.Add(node);
+            }
+        }
+
+        // 5. Replace collections
+        mNodes.Clear();
+        mNodes.AddRange(newNodes);
+        mChildIndices.Clear();
+        mChildIndices.AddRange(newChildIndices);
+    }
+
+    /// <summary>
+    /// Computes and returns a unique string for the subtree at the <see cref="CharNode"/> at the given index.
+    /// </summary>
+    /// <param name="nodeIndex">The index of the <see cref="CharNode"/></param>
+    /// <returns>A unique string</returns>
+    private string ComputeNodeHash(int nodeIndex)
+    {
+        var node = mNodes[nodeIndex];
+        var hash = $"{node.CharIndex}:{(node.IsWordEnd ? 1 : 0)}:{node.ChildCount}";
+
+        for (var ci = 0; ci < node.ChildCount; ci++)
+        {
+            hash += $":{mChildIndices[node.FirstChildIndex + ci]}";
+        }
+        return hash;
+    }
 
     /// <summary>
     /// Matches all words that start with the pattern, represented by the given <see cref="PatternMatch"/> and whose length is the same as the pattern length.
@@ -594,6 +702,27 @@ public sealed class CharTrie
             throw new NotSupportedException(nameof(character));
         }
         return idx;
+    }
+
+    /// <summary>
+    /// Replaces all references to the given node index with <paramref name="newIndex"/> in parent nodes.
+    /// </summary>
+    /// <param name="currentIndex">The index to replace</param>
+    /// <param name="newIndex">The replacement value</param>
+    private void MergeNodes(int currentIndex, int newIndex)
+    {
+        for (var i = 0; i < mNodes.Count; i++)
+        {
+            var node = mNodes[i];
+            for (var ci = 0; ci < node.ChildCount; ci++)
+            {
+                var childPos = node.FirstChildIndex + ci;
+                if (mChildIndices[childPos] == currentIndex)
+                {
+                    mChildIndices[childPos] = newIndex;
+                }
+            }
+        }
     }
 
     /// <summary>
