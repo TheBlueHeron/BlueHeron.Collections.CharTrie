@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+		<RepositoryUrl>https://github.com/TheBlueHeron/BlueHeron.Collections.Trie</RepositoryUrl>
+		<AnalysisLevel>latest-recommended</AnalysisLevel>
+	</PropertyGroup>
+	<ItemGroup>
+	  <Compile Remove="Objects\SizeOf.cs" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="coverlet.collector" Version="6.0.4">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.11.0" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.11.0" />
+	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\BlueHeron.Collections.CharTrie\BlueHeron.Collections.CharTrie.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  <None Update="Dictionaries\de.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\en.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\fr.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\la.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\nl.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\nl.dic_old">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Dictionaries\sp.dic">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+</Project>

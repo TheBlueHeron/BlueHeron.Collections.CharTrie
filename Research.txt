@@ -1,0 +1,5 @@
+https://github.com/miniksa/trie/tree/main
+
+https://jbp.dev/blog/dawg-basics.html
+
+https://github.com/bzaar/DawgSharp
