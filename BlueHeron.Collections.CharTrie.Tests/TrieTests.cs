@@ -307,11 +307,12 @@ public class D_BenchMarking
 
     [TestMethod]
     public async Task Run()
-    { // TODO: add suffix benchmark
+    {
         List<string> lstWords = [];
         List<string> lstTestWords = [];
         List<string> lstPrefixes = ["aan", "op", "in", "ver", "mee", "hoog", "laag", "tussen", "ter", "over"]; // high prevalence prefixes (in dutch anyway)
         List<char?[]> lstPatterns = [['o', 'r', 'd'], ['g', 'e', 's'], ['o', null, 'o']];
+        List<string> lstSuffixes = ["en", "es", "is", "ten", "je"]; // high prevalence suffixes (in dutch anyway)
 
         BenchMarkResult bmListContains = new();
         BenchMarkResult bmCharTrieContains = new();
@@ -319,6 +320,8 @@ public class D_BenchMarking
         BenchMarkResult bmCharTriePattern = new();
         BenchMarkResult bmListPrefix = new();
         BenchMarkResult bmCharTriePrefix = new();
+        BenchMarkResult bmListSuffix = new();
+        BenchMarkResult bmCharTrieSuffix = new();
 
         Assert.IsTrue(File.Exists("dictionaries\\nl.json"));
         Assert.IsTrue(File.Exists("dictionaries\\nl_2.json"));
@@ -386,6 +389,16 @@ public class D_BenchMarking
 
                 Assert.AreEqual(numCharTrie, numList); // tegridy check
             }
+            foreach (var suffix in lstSuffixes) // suffix test
+            {
+                var numList = 0;
+                var numCharTrie = 0;
+
+                bmListSuffix.AddResult(TestListEndsWith(lstWords, suffix, ref numList));
+                bmCharTrieSuffix.AddResult(TestCharTrieEndsWith(charTrie, suffix, ref numCharTrie));
+
+                Assert.AreEqual(numCharTrie, numList); // tegridy check
+            }
             foreach (var pattern in lstPatterns) // pattern test
             {
                 var numList = 0;
@@ -403,6 +416,9 @@ public class D_BenchMarking
             WriteSpeedBenchmarkBorder();
             WriteSpeedBenchmarkRow("List StartsWith", bmListPrefix);
             WriteSpeedBenchmarkRow("ChTr Find(prefix)", bmCharTriePrefix);
+            WriteSpeedBenchmarkBorder();
+            WriteSpeedBenchmarkRow("List EndsWith", bmListSuffix);
+            WriteSpeedBenchmarkRow("ChTr Find(suffix)", bmCharTrieSuffix);
             WriteSpeedBenchmarkBorder();
             WriteSpeedBenchmarkRow("List Regex", bmListPattern);
             WriteSpeedBenchmarkRow("ChTr Find(pattern)", bmCharTriePattern);
@@ -463,6 +479,22 @@ public class D_BenchMarking
     }
 
     /// <summary>
+    /// Calls <see cref="List{string}"/>.Where(w => w.EndsWith(suffix, StringComparison.CurrentCulture)).ToList() and returns the duration of the call.
+    /// </summary>
+    /// <param name="list">The <see cref="List{string}"/> to use</param>
+    /// <param name="suffix">The suffix to match</param>
+    /// <param name="num">Result of the function call</param>
+    /// <returns>A <see cref="TimeSpan"/></returns>
+    private static TimeSpan TestListEndsWith(List<string> list, string suffix, ref int num)
+    {
+        var start = DateTime.Now;
+
+        num = list.Where(w => w.EndsWith(suffix, StringComparison.CurrentCulture)).ToList().Count;
+
+        return DateTime.Now - start;
+    }
+
+    /// <summary>
     /// Calls <see cref="CharTrie.Contains(string, bool)"/> and returns the duration of the call.
     /// </summary>
     /// <param name="trie">The <see cref="CharTrie"/> to use</param>
@@ -506,6 +538,23 @@ public class D_BenchMarking
     {
         var start = DateTime.Now;
         var pattern = PatternMatch.FromPrefix(prefix);
+
+        num = trie.Find(pattern).ToList().Count;
+
+        return DateTime.Now - start;
+    }
+
+    /// <summary>
+    /// Calls <see cref="CharTrie.Find(string, bool)"/>.ToList() and returns the duration of the call.
+    /// </summary>
+    /// <param name="trie">The <see cref="CharTrie"/> to use</param>
+    /// <param name="suffix">The suffix to match</param>
+    /// <param name="num">Result of the function call</param>
+    /// <returns>A <see cref="TimeSpan"/></returns>
+    private static TimeSpan TestCharTrieEndsWith(CharTrie trie, string suffix, ref int num)
+    {
+        var start = DateTime.Now;
+        var pattern = PatternMatch.FromSuffix(suffix);
 
         num = trie.Find(pattern).ToList().Count;
 
