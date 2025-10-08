@@ -16,7 +16,7 @@ public sealed class CharTrie
 
     internal readonly char[] mCharacters;
     internal readonly List<CharNode> mNodes;
-    private List<List<int>> mChildBuffers; // temporary per-node child lists
+    private List<List<int>> mChildBuffers; // temporary per-node child lists used while adding words
     internal readonly List<int> mChildIndices; // final flattened list
     private Dictionary<string, int> mSubTrees = []; // temporary subtree dictionary
 
@@ -34,24 +34,37 @@ public sealed class CharTrie
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     internal struct CharNode : IEquatable<CharNode>
     {
-        public int FirstChildIndex;
-        private uint _meta;
+        private uint _meta; // 0-7: CharIndex; 8-15: ChildCount; 16: IsWordEnd; 16-31: RemainingDepth
 
+        /// <summary>
+        /// The index of the first child <see cref="CharNode"/> in the child indices list.
+        /// </summary>
+        public int FirstChildIndex;
+        
+        /// <summary>
+        /// The index of the character in the characters set, represented by this <see cref="CharNode"/>.
+        /// </summary>
         public byte CharIndex
         {
             readonly get => (byte)(_meta & 0xFFu);
             set => _meta = (_meta & ~0xFFu) | value;
         }
 
+        /// <summary>
+        /// The number of child <see cref="CharNode"/>s under this <see cref="CharNode"/>.
+        /// </summary>
         public byte ChildCount
         {
             readonly get => (byte)((_meta >> 8) & 0xFFu);
             set => _meta = (_meta & ~0xFF00u) | ((uint)value << 8);
         }
 
+        /// <summary>
+        /// If <see langword="true"/>, this <see cref="CharNode"/> terminates a word; else <see langword="false"/>.
+        /// </summary>
         public bool IsWordEnd
         {
-            readonly get => ((_meta >> 16) & 1u) == 1u;
+            readonly get => ((_meta >> 16) & 0x1u) == 1u;
             set
             {
                 if (value)
@@ -63,6 +76,15 @@ public sealed class CharTrie
                     _meta &= ~(1u << 16);
                 }
             }
+        }
+
+        /// <summary>
+        /// The maximum depth of the subtree under this <see cref="CharNode"/>.
+        /// </summary>
+        public ushort RemainingDepth
+        {
+            readonly get => (ushort)((_meta >> 17) & 0x7FFFu);
+            set => _meta = (_meta & ~(0xFFFFu << 17)) | ((uint)(value & 0x7FFF) << 17);
         }
 
         #region Operators and overrides
@@ -105,7 +127,7 @@ public sealed class CharTrie
     internal CharTrie(char[] characters)
     {
         mCharacters = characters;
-        mChildIndices = [];
+        mChildIndices = new List<int>(16);
         mNodes = new List<CharNode>(16)
         {
             new() { CharIndex = 0, FirstChildIndex = 0, ChildCount = 0, IsWordEnd = false } // root node
@@ -189,19 +211,17 @@ public sealed class CharTrie
         }
 
         var currentIndex = 0;
-        var nodesLocal = mNodes;
-        var buffersLocal = mChildBuffers!; // not null while unlocked
 
         for (var c = 0; c < word.Length; c++)
         {
             var charIndex = GetCharIndex(word[c]);
-            var children = buffersLocal[currentIndex];
+            var children = mChildBuffers[currentIndex];
             var foundIndex = -1;
 
             for (var i = 0; i < children.Count; i++)
             {
                 var childIdx = children[i];
-                if (nodesLocal[childIdx].CharIndex == (byte)charIndex)
+                if (mNodes[childIdx].CharIndex == charIndex)
                 {
                     foundIndex = childIdx;
                     break;
@@ -209,11 +229,11 @@ public sealed class CharTrie
             }
             if (foundIndex == -1)
             {
-                var newNodeIndex = nodesLocal.Count;
+                var newNodeIndex = mNodes.Count;
 
                 children.Add(newNodeIndex); // set up child list for new node
-                nodesLocal.Add(new CharNode { CharIndex = (byte)charIndex, FirstChildIndex = 0, ChildCount = 0, IsWordEnd = false });
-                buffersLocal.Add(new List<int>(2));
+                mNodes.Add(new CharNode { CharIndex = charIndex, FirstChildIndex = 0, ChildCount = 0, IsWordEnd = false });
+                mChildBuffers.Add(new List<int>(2));
                 currentIndex = newNodeIndex;
             }
             else
@@ -222,11 +242,11 @@ public sealed class CharTrie
             }
         }
 
-        var node = nodesLocal[currentIndex]; // mark end-of-word
+        var node = mNodes[currentIndex]; // mark end-of-word
         if (!node.IsWordEnd)
         {
             node.IsWordEnd = true;
-            nodesLocal[currentIndex] = node;
+            mNodes[currentIndex] = node;
             Count++;
         }
     }
@@ -274,23 +294,28 @@ public sealed class CharTrie
         ArgumentException.ThrowIfNullOrEmpty(word);
 
         var currentIndex = 0;
-        var nodesLocal = mNodes;
-        var childIndicesLocal = mChildIndices;
 
         for (var c = 0; c < word.Length; c++)
         {
+            var node = mNodes[currentIndex];
+            
+            if ((word.Length - c) > node.RemainingDepth) // match can never be made in this subtree
+            {
+                return false;
+            }
+
             var charIndex = GetCharIndex(word[c]);
-            var childStart = nodesLocal[currentIndex].FirstChildIndex;
-            var childCount = nodesLocal[currentIndex].ChildCount;
+            var childStart = node.FirstChildIndex;
+            var childCount = node.ChildCount;
             var found = false;
 
             for (var i = 0; i < childCount; i++)
             {
-                var childIndex = childIndicesLocal[childStart + i];
-                if (nodesLocal[childIndex].CharIndex == (byte)charIndex)
+                var childIndex = mChildIndices[childStart + i];
+                if (mNodes[childIndex].CharIndex == charIndex)
                 {
-                    found = true;
                     currentIndex = childIndex;
+                    found = true;
                     break;
                 }
             }
@@ -349,29 +374,14 @@ public sealed class CharTrie
     {
         if (!IsLocked)
         {
-            mChildIndices.Clear();
-            for (var i = 0; i < mNodes.Count; i++)
-            {
-                var children = mChildBuffers[i];
-                var node = mNodes[i];
-
-                if (sort)
-                {
-                    children.Sort((a, b) => mNodes[a].CharIndex.CompareTo(mNodes[b].CharIndex));
-                }
-                node.FirstChildIndex = mChildIndices.Count;
-                node.ChildCount = (byte)children.Count;
-                mNodes[i] = node; // update node
-                mChildIndices.AddRange(children);
-            }
-            mChildBuffers.Clear();
-            mChildBuffers = null!;
+            FlattenBuffers(sort);
             if (compactToDawg)
             {
                 CompactToDawg();
             }
             mNodes.TrimExcess();
             mChildIndices.TrimExcess();
+            UpdateRemainingDepths();
             IsLocked = true;
         }
     }
@@ -380,6 +390,9 @@ public sealed class CharTrie
 
     #region Private methods and functions
 
+    /// <summary>
+    /// Merges identical suffix subtrees and updates node and child indices.
+    /// </summary>
     private void CompactToDawg()
     {
         // 1. merge identical subtrees (longest step)
@@ -638,6 +651,32 @@ public sealed class CharTrie
     }
 
     /// <summary>
+    /// Converts temporary buffer lists to flat arrays and updates the nodes correspondingly.
+    /// </summary>
+    /// <param name="sort">If <see langword="true"/>, child nodes are alphabetically before flattening</param>
+    private void FlattenBuffers(bool sort)
+    {
+
+        mChildIndices.Clear();
+        for (var i = 0; i < mNodes.Count; i++)
+        {
+            var children = mChildBuffers[i];
+            var node = mNodes[i];
+
+            if (sort)
+            {
+                children.Sort((a, b) => mNodes[a].CharIndex.CompareTo(mNodes[b].CharIndex));
+            }
+            node.FirstChildIndex = mChildIndices.Count;
+            node.ChildCount = (byte)children.Count;
+            mNodes[i] = node; // update node
+            mChildIndices.AddRange(children);
+        }
+        mChildBuffers.Clear();
+        mChildBuffers = null!;
+    }
+
+    /// <summary>
     /// Matches all words that end with the pattern, represented by the given <see cref="PatternMatch"/>.
     /// </summary>
     /// <param name="pattern">The <see cref="PatternMatch"/> to evaluate</param>
@@ -693,7 +732,7 @@ public sealed class CharTrie
     /// Returns the index of the given character in the characters array.
     /// Uses O(1) table lookup instead of binary search.
     /// </summary>
-    private int GetCharIndex(char character)
+    private byte GetCharIndex(char character)
     {
         var idx = mCharMap[character];
 
@@ -722,6 +761,37 @@ public sealed class CharTrie
                     mChildIndices[childPos] = newIndex;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Updates <see cref="CharNode.RemainingDepth"/> for all nodes (max path to leaf).
+    /// </summary>
+    private void UpdateRemainingDepths()
+    {
+        for (var i = mNodes.Count - 1; i >= 0; i--)
+        {
+            var node = mNodes[i];
+            if (node.ChildCount == 0)
+            {
+                node.RemainingDepth = 0;
+            }
+            else
+            {
+                ushort maxDepth = 0;
+                for (var ci = 0; ci < node.ChildCount; ci++)
+                {
+                    var childIdx = mChildIndices[node.FirstChildIndex + ci];
+                    var childDepth = (ushort)(mNodes[childIdx].RemainingDepth + 1);
+
+                    if (childDepth > maxDepth)
+                    {
+                        maxDepth = childDepth;
+                    }
+                }
+                node.RemainingDepth = maxDepth;
+            }
+            mNodes[i] = node;
         }
     }
 
