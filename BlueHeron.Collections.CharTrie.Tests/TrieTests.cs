@@ -52,7 +52,7 @@ public class A_TrieTests()
         Assert.IsTrue(trie != null && trie.Count == 343075);
 
         trie.Prune();
-        Assert.IsTrue(await CharTrieFactory.ExportAsync(trie, "dictionaries\\nl_2.json"));
+        Assert.IsTrue(await CharTrieFactory.ExportAsync(trie, "dictionaries\\nl.json"));
 
         //var memStream = await CharTrieFactory.ExportAsync(trie);
         //Assert.IsNotNull(memStream);
@@ -64,7 +64,7 @@ public class A_TrieTests()
     {
         //using var stream = File.OpenRead("dictionaries\\nl_2.json");
         //var trie = await CharTrieFactory.LoadAsync(stream);
-        var trie = await CharTrieFactory.LoadAsync(new FileInfo("dictionaries\\nl_2.json"));
+        var trie = await CharTrieFactory.LoadAsync(new FileInfo("dictionaries\\nl.json"));
 
         Assert.IsTrue(trie != null && trie.Count == 343075);
     }
@@ -324,12 +324,11 @@ public class D_BenchMarking
         BenchMarkResult bmCharTrieSuffix = new();
 
         Assert.IsTrue(File.Exists("dictionaries\\nl.json"));
-        Assert.IsTrue(File.Exists("dictionaries\\nl_2.json"));
         Assert.IsTrue(File.Exists("dictionaries\\nl.dic"));
 
         GC.GetTotalMemory(true);
         var startMemory = GC.GetTotalAllocatedBytes(true);
-        var charTrie = await CharTrieFactory.LoadAsync(new FileInfo("dictionaries\\nl_2.json")); // create trie from export created earlier
+        var charTrie = await CharTrieFactory.LoadAsync(new FileInfo("dictionaries\\nl.json")); // create trie from export created earlier
         GC.Collect();
         GC.GetTotalMemory(true);
         var charTrieMem = GC.GetTotalAllocatedBytes(true) - startMemory;

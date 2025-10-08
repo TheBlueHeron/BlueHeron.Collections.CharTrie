@@ -25,7 +25,7 @@ internal sealed class CharTrieConverter : JsonConverter<CharTrie>
         var count = 0;
         List<char> chars = [];
         List<int> indices = [];
-        List<CharTrie.CharNode> nodes = [];
+        List<CharNode> nodes = [];
 
         while (reader.Read())
         {
@@ -85,7 +85,7 @@ internal sealed class CharTrieConverter : JsonConverter<CharTrie>
                                     case JsonTokenType.StartObject:
                                         using (var doc = JsonDocument.ParseValue(ref reader))
                                         {
-                                            var node = JsonSerializer.Deserialize<CharTrie.CharNode>(doc.RootElement, options);
+                                            var node = JsonSerializer.Deserialize<CharNode>(doc.RootElement, options);
                                             nodes.Add(node);
                                         }
                                         break;

@@ -6,7 +6,7 @@ namespace BlueHeron.Collections.Trie.Serialization;
 /// <summary>
 /// A <see cref="JsonConverter{CharNode}"/> that minimizes output.
 /// </summary>
-internal sealed class CharNodeConverter : JsonConverter<CharTrie.CharNode>
+internal sealed class CharNodeConverter : JsonConverter<CharNode>
 {
     #region Fields
 
@@ -14,15 +14,16 @@ internal sealed class CharNodeConverter : JsonConverter<CharTrie.CharNode>
     private const string _I = "i"; // CharIndex
     private const string _C = "c"; // ChildCount
     private const string _W = "w"; // IsWordEnd
+    private const string _R = "r"; // RemainingDepth
 
     #endregion
 
     #region Overrides
 
     /// <inheritdoc/>
-    public override CharTrie.CharNode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override CharNode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var node = new CharTrie.CharNode();
+        var node = new CharNode();
 
         while (reader.Read())
         {
@@ -48,6 +49,10 @@ internal sealed class CharNodeConverter : JsonConverter<CharTrie.CharNode>
                             reader.Read();
                             node.IsWordEnd = true;  // no need to read value, because the value is always 1, meaning 'true'. When node.IsWord = false, it is not written during serialization.
                             break;
+                        case _R:
+                            reader.Read();
+                            node.RemainingDepth = (ushort)reader.GetInt16();
+                            break;
                     }
                     break;
                 case JsonTokenType.EndObject: // EndObject of node
@@ -58,7 +63,7 @@ internal sealed class CharNodeConverter : JsonConverter<CharTrie.CharNode>
     }
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, CharTrie.CharNode value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, CharNode value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
         writer.WriteNumber(_F, value.FirstChildIndex);
@@ -68,6 +73,7 @@ internal sealed class CharNodeConverter : JsonConverter<CharTrie.CharNode>
         {
             writer.WriteNumber(_W, 1);
         }
+        writer.WriteNumber(_R, value.RemainingDepth);
         writer.WriteEndObject();
     }
 

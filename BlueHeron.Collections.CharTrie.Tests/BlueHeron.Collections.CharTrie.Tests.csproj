@@ -40,7 +40,7 @@
 	  <None Update="Dictionaries\nl.dic">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
-	  <None Update="Dictionaries\nl.dic_old">
+	  <None Update="Dictionaries\nl.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	  <None Update="Dictionaries\sp.dic">
