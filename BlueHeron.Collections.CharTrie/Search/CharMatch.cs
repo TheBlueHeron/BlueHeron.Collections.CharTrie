@@ -7,7 +7,7 @@ namespace BlueHeron.Collections.Trie.Search;
 /// Container for details on matching a character in a <see cref="PatternMatch"/>.
 /// </summary>
 [DebuggerStepThrough()]
-public class CharMatch
+public struct CharMatch : IEquatable<CharMatch>
 {
     #region Objects and variables
 
@@ -32,7 +32,7 @@ public class CharMatch
     /// Returns a boolean, determining whether this <see cref="CharMatch"/> represents a wildcard.
     /// </summary>
     [JsonIgnore()]
-    public bool IsWildCard => Primary == null && Alternatives == null;
+    public readonly bool IsWildCard => Primary == null && Alternatives == null;
 
     /// <summary>
     /// Gets the character for which to find a match first.
@@ -84,7 +84,7 @@ public class CharMatch
     /// <param name="character">The character to match</param>
     /// <returns><see langword="bool"/>, <see langword="true"/> if the character is a match</returns>
     [DebuggerStepThrough()]
-    public bool IsMatch(char character)
+    public readonly bool IsMatch(char character)
     {
         if (Primary == null)
         {
@@ -111,7 +111,7 @@ public class CharMatch
     /// Overridden to return this <see cref="CharMatch"/> as a regex string.
     /// </summary>
     /// <returns>A regex expression</returns>
-    public override string ToString()
+    public readonly override string ToString()
     {
         if (Primary == null)
         {
@@ -122,6 +122,47 @@ public class CharMatch
             return $"{Primary}";
         }
         return $"[{string.Join(_PIPE, Primary, Alternatives)}]";
+    }
+
+    /// <inheritdoc/>
+    public readonly override bool Equals(object? obj)
+    {
+        return obj is CharMatch match && Equals(match);
+    }
+
+    /// <summary>
+    /// Returns a value indicating whether this <see cref="CharMatch"/> is equal to the given <see cref="CharMatch"/>.
+    /// </summary>
+    /// <param name="left">The left <see cref="CharMatch"/></param>
+    /// <returns><see langword="true"/> if this <see cref="CharMatch"/> is equal to the other; else <see langword="false"/></returns>
+    public readonly bool Equals(CharMatch other) => this == other;
+
+    /// <inheritdoc/>
+    public readonly override int GetHashCode()
+    {
+        return ToString()?.GetHashCode(StringComparison.InvariantCulture) ?? 0;
+    }
+
+    /// <summary>
+    /// Returns a value indicating whether the given <see cref="CharMatch"/>es are equal.
+    /// </summary>
+    /// <param name="left">The left <see cref="CharMatch"/></param>
+    /// <param name="right">The right <see cref="CharMatch"/></param>
+    /// <returns><see langword="true"/> if the <see cref="CharMatch"/>es are equal; else <see langword="false"/></returns>
+    public static bool operator ==(CharMatch left, CharMatch right)
+    {
+        return left.Equals(right);
+    }
+
+    /// <summary>
+    /// Returns a value indicating whether the given <see cref="CharMatch"/>es are not equal.
+    /// </summary>
+    /// <param name="left">The left <see cref="CharMatch"/></param>
+    /// <param name="right">The right <see cref="CharMatch"/></param>
+    /// <returns><see langword="true"/> if the <see cref="CharMatch"/>es are not equal; else <see langword="false"/></returns>
+    public static bool operator !=(CharMatch left, CharMatch right)
+    {
+        return !(left == right);
     }
 
     #endregion

@@ -1,6 +1,8 @@
-First run (on old laptop)
+The memory usage values below were calculated in a very crude way that is not guaranteed to be accurate.
 
-Debug Trace:
+## First run (on old laptop)
+
+### Debug Trace:
 |--------|-----------|
 | Object |      Size |
 |--------|-----------|
@@ -22,9 +24,9 @@ Debug Trace:
 |   Trie Find(pattern) |      3 |        512919,4 |       2998233,6 |       1361573,0 |      2998233,6 |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 
-Densemap to HashSet (new laptop, faster) -> 
+## Densemap to HashSet (new laptop, faster) -> 
 
-Debug Trace:
+### Debug Trace:
 |--------|--------------|
 | Object |         Size |
 |--------|--------------|
@@ -46,9 +48,9 @@ Debug Trace:
 |   Trie Find(pattern) |      3 |        308881,3 |       1785930,8 |        812242,9 |       341916,5 |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 
-Value object to double ->
+## Value object to double ->
 
-    Debug Trace:
+### Debug Trace:
 |--------|--------------|
 | Object |         Size |
 |--------|--------------|
@@ -71,9 +73,9 @@ Value object to double ->
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 
 
-PatterMatch.IsFragment optimizations and error corrections
+## PatterMatch.IsFragment optimizations and error corrections
 
-Debug Trace:
+### Debug Trace:
 |--------|------------|--------------|
 | Object |    # Nodes |         Size |
 |--------|------------|--------------|
@@ -92,12 +94,12 @@ Debug Trace:
 |    Trie Find(prefix) |     10 |           115,6 |          4957,2 |          1428,0 |         1721,2 |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |         List Pattern |      3 |         67218,8 |         89170,1 |         80509,3 |        85138,9 |
-|   Trie Find(pattern) |      3 |         83456,5 |         90522,1 |         87004,9 |        83456,5 | <!-- now comparable
+|   Trie Find(pattern) |      3 |         83456,5 |         90522,1 |         87004,9 |        83456,5 | <!-- now comparable (but has errors)
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 
-CharMatch.IsMatch inlining. Aggressive null checks
+## CharMatch.IsMatch inlining. Aggressive null checks
 
-Debug Trace:
+### Debug Trace:
 |--------|------------|--------------|
 | Object |    # Nodes |         Size |
 |--------|------------|--------------|
@@ -119,9 +121,9 @@ Debug Trace:
 |   Trie Find(pattern) |      3 |         79996,4 |         84119,5 |         81699,9 |        79996,4 |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 
-Node refactoring to struct
+## Node refactoring to struct
 
-Debug Trace:
+### Debug Trace:
 |--------|------------|--------------|
 | Object |    # Nodes |         Size |
 |--------|------------|--------------|
@@ -143,10 +145,9 @@ Debug Trace:
 |   Trie Find(pattern) |      3 |         67661,5 |         70327,0 |         68673,7 |        68032,6 |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 
-Removal of NodeReference stuff; properly ref TrieNode itself.
-IsVisited and IsWord to byte flag.
+## Removal of NodeReference stuff; properly ref TrieNode itself. IsVisited and IsWord to byte flag.
 
-    Debug Trace:
+### Debug Trace:
 |--------|------------|--------------|
 | Object |    # Nodes |         Size |
 |--------|------------|--------------|
@@ -168,9 +169,9 @@ IsVisited and IsWord to byte flag.
 |   Trie Find(pattern) |      3 |         31906,0 |         52753,5 |         39331,0 |        33333,4 |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 
-Complete refactoring into flat arrays.
+## Complete refactoring into flat arrays.
 
-    Debug Trace:
+### Debug Trace:
 |--------|------------|--------------|
 | Object |    # Nodes |         Size |
 |--------|------------|--------------|
@@ -276,7 +277,7 @@ Complete refactoring into flat arrays.
 |   ChTr Find(pattern) |      3 |         29193,2 |         33127,5 |         31637,5 |        32591,7 |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 
-## Add RemainingDepth optimization -> Disappointing
+## Add RemainingDepth optimization -> Disappointing, but keep
 
 ### TestContext Messages:
 |--------|------------|--------------|
@@ -284,7 +285,7 @@ Complete refactoring into flat arrays.
 |--------|------------|--------------|
 |   List |     343075 |   24690464 B |
 |--------|------------|--------------|
-|   ChTr |     196782 |   75709224 B |
+|   ChTr |     196782 |   54509924 B |
 |--------|------------|--------------|
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |

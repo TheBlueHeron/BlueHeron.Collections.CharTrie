@@ -1,15 +1,27 @@
 ﻿# BlueHeron.Collections.CharTrie
 
+## Introduction
+
+The CharTrie is a combination of a Trie and a directed acyclic word graph (DAWG) that results in a very compact representation of a list of words that allows for very fast search operations.
+The available Find function accepts a PatternMatch object that enables the standards searches equivalent to '==', 'StartsWith' and 'EndsWith', but also more complex patterns, e.g.: '2nd letter is 'A' AND 4th letter is 'O' OR 'Ö'.
+The Tests project's functions demonstrate the possibilities in detail.
+A CharTrieFactory is also available that helps in creating (new or from a dictionary / word list) and (de-)serializing CharTrie objects.
+
+## Usage
+
+<! TODO -->
+
 ## Benchmark ([history](BENCHMARKS.md))
 
-    TestContext Messages:
-|--------|------------|--------------|
-| Object |    # Nodes |         Size |
-|--------|------------|--------------|
-|   List |     343075 |   20482984 B |
-|--------|------------|--------------| <! Using diagnostic tools snapshot
-|   ChTr |     196782 |    4260336 B |
-|--------|------------|--------------|
+### TestContext Messages:
+|---------|------------|--------------|
+| Object  |    # Nodes |         Size |
+|---------|------------|--------------|
+|   List  |     343075 |   20482984 B |
+|---------|------------|--------------| <! Using diagnostic tools snapshot
+|   ChTr  |     196782 |    4260336 B |
+|---------|------------|--------------|
+
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
