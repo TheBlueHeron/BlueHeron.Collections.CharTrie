@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
+using System.Xml.Linq;
 using BlueHeron.Collections.Trie.Serialization;
 
 namespace BlueHeron.Collections.Trie;
@@ -72,7 +73,7 @@ internal struct CharNode : IEquatable<CharNode>
     public readonly override bool Equals(object? obj) => obj is CharNode n && Equals(n);
 
     /// <inheritdoc/>
-    public readonly override int GetHashCode() => CharIndex.GetHashCode();
+    public readonly override int GetHashCode() => HashCode.Combine(CharIndex, IsWordEnd, ChildCount);
 
     /// <summary>
     /// Compares by comparing <see cref="CharIndex"/> values.

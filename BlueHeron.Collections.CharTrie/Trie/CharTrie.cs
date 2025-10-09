@@ -17,7 +17,7 @@ public sealed partial class CharTrie
     internal readonly List<CharNode> mNodes;
     private List<List<int>> mChildBuffers; // temporary per-node child lists used while adding words
     internal readonly List<int> mChildIndices; // final flattened list
-    private Dictionary<string, int> mSubTrees = []; // temporary subtree dictionary
+    private Dictionary<string, int>? mSubTrees; // temporary subtree dictionary
 
     // Fast map from Unicode codepoint (char) to character index in mCharacters
     // 0xFF: invalid
@@ -182,14 +182,18 @@ public sealed partial class CharTrie
     public IEnumerable<string> All()
     {
         var results = new List<string>();
-        // if no children, return empty
         var rootChildCount = mNodes[0].ChildCount;
         var childStart = mNodes[0].FirstChildIndex;
+
         for (var i = 0; i < rootChildCount; i++)
         {
             var childIndex = mChildIndices[childStart + i];
-            var ch = mCharacters[mNodes[childIndex].CharIndex]; // start prefix with the character for this child
-            Walk(childIndex, ch, ref results);
+            var stack = new Stack<(int nodeIndex, int depth)>();
+            var buffer = ArrayPool<char>.Shared.Rent(256);
+
+            buffer[0] = mCharacters[mNodes[childIndex].CharIndex]; // start prefix with the character for this child
+            stack.Push((childIndex, 1));
+            Walk(ref buffer, ref stack, ref results); // will return the buffer to the ArrayPool
         }
         return results;
     }
@@ -305,10 +309,12 @@ public sealed partial class CharTrie
     /// </summary>
     private void CompactToDawg()
     {
-        // 1. merge identical subtrees (longest step)
+        mSubTrees = [];
+
+        // 1. merge identical subtrees (most expensive step)
         for (var i = mNodes.Count - 1; i >= 0; i--) // traverse nodes from last to first (bottom-up)
         {
-            var hash = ComputeNodeHash(i);
+            var hash = GetSubTreeHashCode(i);
             if (mSubTrees.TryGetValue(hash, out var existingIndex))
             {
                 MergeNodes(i, existingIndex);
@@ -319,7 +325,7 @@ public sealed partial class CharTrie
             }
         }
         mSubTrees.Clear();
-        mSubTrees = null!;
+        mSubTrees = null;
 
         // 2. find all reachable nodes (from root node 0)
         var reachable = new bool[mNodes.Count];
@@ -383,23 +389,6 @@ public sealed partial class CharTrie
         mNodes.AddRange(newNodes);
         mChildIndices.Clear();
         mChildIndices.AddRange(newChildIndices);
-    }
-
-    /// <summary>
-    /// Computes and returns a unique string for the subtree at the <see cref="CharNode"/> at the given index.
-    /// </summary>
-    /// <param name="nodeIndex">The index of the <see cref="CharNode"/></param>
-    /// <returns>A unique string</returns>
-    private string ComputeNodeHash(int nodeIndex)
-    {
-        var node = mNodes[nodeIndex];
-        var hash = $"{node.CharIndex}:{(node.IsWordEnd ? 1 : 0)}:{node.ChildCount}";
-
-        for (var ci = 0; ci < node.ChildCount; ci++)
-        {
-            hash += $":{mChildIndices[node.FirstChildIndex + ci]}";
-        }
-        return hash;
     }
 
     /// <summary>
@@ -580,6 +569,7 @@ public sealed partial class CharTrie
     /// <param name="sort">If <see langword="true"/>, child nodes are alphabetically before flattening</param>
     private void FlattenBuffers(bool sort)
     {
+        int sorter(int a, int b) => mNodes[a].CharIndex.CompareTo(mNodes[b].CharIndex);
 
         mChildIndices.Clear();
         for (var i = 0; i < mNodes.Count; i++)
@@ -589,7 +579,7 @@ public sealed partial class CharTrie
 
             if (sort)
             {
-                children.Sort((a, b) => mNodes[a].CharIndex.CompareTo(mNodes[b].CharIndex));
+                children.Sort(sorter);
             }
             node.FirstChildIndex = mChildIndices.Count;
             node.ChildCount = (byte)children.Count;
@@ -674,6 +664,23 @@ public sealed partial class CharTrie
     }
 
     /// <summary>
+    /// Computes and returns a unique hash value for the subtree at the <see cref="CharNode"/> at the given index.
+    /// </summary>
+    /// <param name="nodeIndex">The index of the <see cref="CharNode"/></param>
+    /// <returns>A unique integer value</returns>
+    private string GetSubTreeHashCode(int nodeIndex)
+    {
+        var node = mNodes[nodeIndex];
+        var hash = $"{node.CharIndex}:{(node.IsWordEnd ? 1 : 0)}:{node.ChildCount}";
+
+        for (var ci = 0; ci < node.ChildCount; ci++)
+        {
+            hash += $":{mChildIndices[node.FirstChildIndex + ci]}";
+        }
+        return hash;
+    }
+
+    /// <summary>
     /// Replaces all references to the given node index with <paramref name="newIndex"/> in parent nodes.
     /// </summary>
     /// <param name="currentIndex">The index to replace</param>
@@ -726,43 +733,6 @@ public sealed partial class CharTrie
     }
 
     /// <summary>
-    /// Returns all words in the <see cref="CharTrie"/> starting from the given first char.
-    /// </summary>
-    /// <param name="startIndex">The index of the <see cref="CharNode"/> to start searching from</param>
-    /// <param name="firstChar">The first character</param>
-    /// <param name="results">Reference to the <see cref="List{string}"/> containing the matched words</param>
-    private void Walk(int startIndex, char firstChar, ref List<string> results)
-    {
-        var stack = new Stack<(int nodeIndex, int depth)>();
-        var buffer = ArrayPool<char>.Shared.Rent(256);
-
-        buffer[0] = firstChar;
-        stack.Push((startIndex, 1));
-
-        while (stack.Count > 0)
-        {
-            var (nodeIndex, depth) = stack.Pop();
-            var node = mNodes[nodeIndex];
-            var childStart = node.FirstChildIndex;
-            var childCount = node.ChildCount;
-
-            if (node.IsWordEnd) // buffer holds the character for this node already
-            {
-                results.Add(new string(buffer, 0, depth));
-            }
-
-            for (var i = childCount - 1; i >= 0; i--) // push children in reverse order to maintain correct output order
-            {
-                var childIndex = mChildIndices[childStart + i];
-
-                buffer[depth] = mCharacters[mNodes[childIndex].CharIndex];
-                stack.Push((childIndex, depth + 1));
-            }
-        }
-        ArrayPool<char>.Shared.Return(buffer);
-    }
-
-    /// <summary>
     /// Returns all words in the <see cref="CharTrie"/> starting from the given node index and using the given prefix.
     /// </summary>
     /// <param name="startIndex">The index of the <see cref="CharNode"/> to start searching from</param>
@@ -775,7 +745,17 @@ public sealed partial class CharTrie
         prefix.CopyTo(0, buffer, 0, prefix.Length);
 
         stack.Push((startIndex, prefix.Length));
+        Walk(ref buffer, ref stack, ref results); // will return the buffer to the ArrayPool      
+    }
 
+    /// <summary>
+    /// Walks through the given stack and returns all words.
+    /// </summary>
+    /// <param name="buffer">The character buffer to use</param>
+    /// <param name="stack">The <see cref="Stack{(int nodeIndex, int depth)}"/></param>
+    /// <param name="results">The list containing the results</param>
+    private void Walk(ref char[] buffer, ref Stack<(int nodeIndex, int depth)> stack, ref List<string> results)
+    {
         while (stack.Count > 0)
         {
             var (nodeIndex, depth) = stack.Pop();
