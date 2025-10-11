@@ -10,8 +10,12 @@ public class PatternMatch : List<CharMatch>
 {
     #region Objects and variables
 
-    private const string errNoFirstOrLastWildCard = "First and last character should not be null when Type is PatternMatchType.IsFragment.";
     internal const string _DOTSTAR = ".*";
+    internal const string _INVALID = "The pattern is invalid. Check ValidationStatus.";
+
+    private int mChecksum = -1; // flag to check if validation must be performed
+    private PatternMatchType mType;
+    private ValidationStatus mValidationStatus;
 
     #endregion
 
@@ -20,12 +24,34 @@ public class PatternMatch : List<CharMatch>
     /// <summary>
     /// Gets or sets the <see cref="PatternMatchType"/> to use. Default: <see cref="PatternMatchType.IsPrefix"/>.
     /// </summary>
-    public PatternMatchType MatchType { get; set; }
+    public PatternMatchType MatchType {
+        get => mType;
+        set
+        {
+            mType = value;
+            mChecksum = -1; // force validation
+        }
+    }
 
     /// <summary>
     /// Gets the regex expression for this <see cref="PatternMatch"/>.
     /// </summary>
     public string Regex => ToString();
+
+    /// <summary>
+    /// Gets the <see cref="Search.ValidationStatus"/> of this <see cref="PatternMatch"/>.
+    /// </summary>
+    public ValidationStatus ValidationStatus
+    {
+        get
+        {
+            if (mChecksum != Count) // something has changed -> (re-)validate
+            {
+                mValidationStatus = Validate();
+            }
+            return mValidationStatus;
+        }
+    }
 
     #endregion
 
@@ -35,7 +61,7 @@ public class PatternMatch : List<CharMatch>
     /// Creates a new, empty <see cref="PatternMatch"/>.
     /// </summary>
     [DebuggerStepThrough()]
-    public PatternMatch(): base(){}
+    public PatternMatch(): base() { }
 
     /// <summary>
     /// Creates a new <see cref="PatternMatch"/> from the given <see cref="IEnumerable{char?}"/>.
@@ -44,14 +70,7 @@ public class PatternMatch : List<CharMatch>
     /// <param name="pattern">The <see cref="IEnumerable{char?}"/></param>
     /// <param name="type">The <see cref="PatternMatchType"/></param>
     [DebuggerStepThrough()]
-    public PatternMatch(IEnumerable<char?> pattern, PatternMatchType type) : base(pattern.ToCharMatchArray())
-    {
-        if (type == PatternMatchType.IsFragment && (this.First().Primary == null || this.Last().Primary == null))
-        {
-            throw new ArgumentException(errNoFirstOrLastWildCard);
-        }
-        MatchType = type;
-    }
+    public PatternMatch(IEnumerable<char?> pattern, PatternMatchType type) : base(pattern.ToCharMatchArray()) { MatchType = type; }
 
     /// <summary>
     /// Creates a new <see cref="PatternMatch"/> from the given <see cref="IEnumerable{CharMatch}"/>.
@@ -59,14 +78,7 @@ public class PatternMatch : List<CharMatch>
     /// <param name="collection">The <see cref="IEnumerable{CharMatch}"/></param>
     /// <param name="type">The <see cref="PatternMatchType"/></param>
     [DebuggerStepThrough()]
-    public PatternMatch(IEnumerable<CharMatch> collection, PatternMatchType type) : base(collection)
-    {
-        if (type == PatternMatchType.IsFragment && (this.First().Primary == null || this.Last().Primary == null))
-        {
-            throw new ArgumentException(errNoFirstOrLastWildCard);
-        }
-        MatchType = type;
-    }
+    public PatternMatch(IEnumerable<CharMatch> collection, PatternMatchType type) : base(collection) { MatchType = type; }
 
     #endregion
 
@@ -76,65 +88,79 @@ public class PatternMatch : List<CharMatch>
     /// Adds a <see cref="CharMatch"/> to the collection.
     /// </summary>
     /// <param name="character">The character to match</param>
-    public void Add(char character)
-    {
-        Add(new CharMatch(character));
-    }
+    public void Add(char character) => Add(new CharMatch(character));
 
     /// <summary>
     /// Adds a <see cref="CharMatch"/> to the collection.
     /// </summary>
     /// <param name="character">The character to match</param>
     /// <param name="alternatives">Option array of alternative characters to match</param>
-    public void Add(char character, char[]? alternatives)
-    {
-        Add(new CharMatch(character, alternatives));
-    }
+    public void Add(char character, char[]? alternatives) => Add(new CharMatch(character, alternatives));
 
     /// <summary>
     /// Creates a <see cref="PatternMatch"/> of type <see cref="PatternMatchType.IsFragment"/> representing the given fragment.
     /// </summary>
     /// <param name="fragment">The fragment</param>
     /// <returns>A <see cref="PatternMatch"/></returns>
-    public static PatternMatch FromFragment(string fragment)
-    {
-        return new PatternMatch(fragment.ToCharMatchArray(), PatternMatchType.IsFragment);
-    }
+    public static PatternMatch FromFragment(string fragment) => new(fragment.ToCharMatchArray(), PatternMatchType.IsFragment);
 
     /// <summary>
     /// Creates a <see cref="PatternMatch"/> of type <see cref="PatternMatchType.IsPrefix"/> representing the given prefix.
     /// </summary>
     /// <param name="prefix">The prefix</param>
     /// <returns>A <see cref="PatternMatch"/></returns>
-    public static PatternMatch FromPrefix(string? prefix)
-    {
-        return new PatternMatch(prefix.ToCharMatchArray(), PatternMatchType.IsPrefix);
-    }
+    public static PatternMatch FromPrefix(string? prefix) => new(prefix.ToCharMatchArray(), PatternMatchType.IsPrefix);
 
     /// <summary>
     /// Creates a <see cref="PatternMatch"/> of type <see cref="PatternMatchType.IsSuffix"/> representing the given suffix.
     /// </summary>
     /// <param name="suffix">The suffix</param>
     /// <returns>A <see cref="PatternMatch"/></returns>
-    public static PatternMatch FromSuffix(string? suffix)
-    {
-        return new PatternMatch(suffix.ToCharMatchArray(), PatternMatchType.IsSuffix);
-    }
+    public static PatternMatch FromSuffix(string? suffix) => new(suffix.ToCharMatchArray(), PatternMatchType.IsSuffix);
 
     /// <summary>
     /// Creates a <see cref="PatternMatch"/> of type <see cref="PatternMatchType.IsWord"/> representing the given word.
     /// </summary>
     /// <param name="word">The word</param>
     /// <returns>A <see cref="PatternMatch"/></returns>
-    public static PatternMatch FromWord(string word)
+    public static PatternMatch FromWord(string word) => new(word.ToCharMatchArray(), PatternMatchType.IsWord);
+
+    #endregion
+
+    #region Private methods and functions
+
+    /// <summary>
+    /// Validates the pattern of this <see cref="PatternMatch"/>.
+    /// </summary>
+    /// <returns>A <see cref="Search.ValidationStatus"/></returns>
+    private ValidationStatus Validate()
     {
-        return new PatternMatch(word.ToCharMatchArray(), PatternMatchType.IsWord);
+        mChecksum = Count;
+        if (this.First().Primary == null)
+        {
+            if (mType == PatternMatchType.IsFragment)
+            {
+                return ValidationStatus.InvalidStartingWildCard;
+            }
+        }
+        if (this.Last().Primary == null)
+        {
+            if (mType == PatternMatchType.IsFragment)
+            {
+                return ValidationStatus.InvalidEndingWildCard;
+            }
+        }
+        return ValidationStatus.Valid;
     }
+
+    #endregion
+
+    #region Overrides
 
     /// <summary>
     /// Overridden to return this <see cref="PatternMatch"/> as a regex expression.
     /// </summary>
-    /// <returns>A regex expression</returns>
+    /// <returns>A regular expression</returns>
     public override string ToString()
     {
         if (Count == 0)

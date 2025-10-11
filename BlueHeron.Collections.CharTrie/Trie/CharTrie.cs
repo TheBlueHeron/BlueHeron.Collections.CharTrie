@@ -252,6 +252,10 @@ public sealed partial class CharTrie
     {
         ArgumentNullException.ThrowIfNull(pattern, nameof(pattern));
         
+        if (pattern.ValidationStatus != ValidationStatus.Valid)
+        {
+            throw new ArgumentException(PatternMatch._INVALID, nameof(pattern));
+        }
         if (pattern.Count == 0)
         {
             return All();

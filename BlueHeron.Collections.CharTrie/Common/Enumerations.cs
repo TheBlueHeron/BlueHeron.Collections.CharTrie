@@ -1,5 +1,4 @@
-﻿
-namespace BlueHeron.Collections.Trie.Search;
+﻿namespace BlueHeron.Collections.Trie.Search;
 
 /// <summary>
 /// Enumeration of possible ways to match a word using a <see cref="PatternMatch"/>.
@@ -22,4 +21,23 @@ public enum PatternMatchType
     /// The pattern is a suffix (i.e. the word ends with this pattern).
     /// </summary>
     IsSuffix = 3
+}
+
+/// <summary>
+/// Enumeration of possible validation states of a <see cref="PatternMatch"/>.
+/// </summary>
+public enum ValidationStatus
+{
+    /// <summary>
+    /// The <see cref="PatternMatch"/> is valid.
+    /// </summary>
+    Valid = 0,
+    /// <summary>
+    /// The <see cref="PatternMatch"/> is invalid, because a wildcard as first match is not allowed.
+    /// </summary>
+    InvalidStartingWildCard = 1,
+    /// <summary>
+    /// The <see cref="PatternMatch"/> is invalid, because a wildcard as last match is not allowed.
+    /// </summary>
+    InvalidEndingWildCard = 2,
 }

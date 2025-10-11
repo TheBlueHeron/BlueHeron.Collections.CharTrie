@@ -6,9 +6,9 @@ using BlueHeron.Collections.Trie.Search;
 namespace BlueHeron.Collections;
 
 /// <summary>
-/// Extension functions for use with a <see cref="Trie.Trie"/>.
+/// Extension functions.
 /// </summary>
-public static class GuidExtensions
+public static class Extensions
 {
     #region Fields
 
