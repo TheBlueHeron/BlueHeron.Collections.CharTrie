@@ -51,7 +51,7 @@ public class A_TrieTests()
 
         Assert.IsTrue(trie != null && trie.Count == 343075);
 
-        trie.Prune();
+        trie.Prune(); // this is a very costly operation!
         Assert.IsTrue(await CharTrieFactory.ExportAsync(trie, "dictionaries\\nl.json"));
 
         //var memStream = await CharTrieFactory.ExportAsync(trie);
@@ -327,16 +327,16 @@ public class D_BenchMarking
         Assert.IsTrue(File.Exists("dictionaries\\nl.dic"));
 
         GC.GetTotalMemory(true);
-        var startMemory = GC.GetTotalAllocatedBytes(true);
+        var startMemory = GC.GetAllocatedBytesForCurrentThread();
         var charTrie = await CharTrieFactory.LoadAsync(new FileInfo("dictionaries\\nl.json")); // create trie from export created earlier
         GC.Collect();
         GC.GetTotalMemory(true);
-        var charTrieMem = GC.GetTotalAllocatedBytes(true) - startMemory;
+        var charTrieMem = GC.GetAllocatedBytesForCurrentThread() - startMemory;
 
         if (charTrie != null)
         {
             GC.GetTotalMemory(true);
-            startMemory = GC.GetTotalAllocatedBytes(true);
+            startMemory = GC.GetAllocatedBytesForCurrentThread();
 
             using var reader = new FileInfo("dictionaries\\nl.dic").OpenText(); // load list of words
             string? line;
@@ -351,7 +351,7 @@ public class D_BenchMarking
             }
             GC.Collect();
             GC.GetTotalMemory(true);
-            var listMem = GC.GetTotalAllocatedBytes(true) - startMemory;
+            var listMem = GC.GetAllocatedBytesForCurrentThread() - startMemory;
 
             // output memory benchmark results
             WriteMemoryBenchmarkHeader();

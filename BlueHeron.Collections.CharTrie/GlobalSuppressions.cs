@@ -5,5 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Style", "IDE0130:Namespace does not match folder structure", Justification = "Group files by category", Scope = "namespace", Target = "~N:BlueHeron.Collections")]
 [assembly: SuppressMessage("Style", "IDE0130:Namespace does not match folder structure", Justification = "Group files by category", Scope = "namespace", Target = "~N:BlueHeron.Collections.Trie")]
 [assembly: SuppressMessage("Style", "IDE0130:Namespace does not match folder structure", Justification = "Group files by category", Scope = "namespace", Target = "~N:BlueHeron.Collections.Trie.Search")]
+[assembly: SuppressMessage("Style", "IDE0130:Namespace does not match folder structure", Justification = "Group files by category", Scope = "namespace", Target = "~N:BlueHeron.Collections.Trie.Serialization")]
 [assembly: SuppressMessage("Naming", "CA1812:Avoid uninstantiated internal classes", Justification = "Json converter is indeed instantiated.", Scope = "type", Target = "~T:BlueHeron.Collections.Trie.Serialization.CharNodeConverter")]
 [assembly: SuppressMessage("Naming", "CA1812:Avoid uninstantiated internal classes", Justification = "Json converter is indeed instantiated.", Scope = "type", Target = "~T:BlueHeron.Collections.Trie.Serialization.CharTrieConverter")]
