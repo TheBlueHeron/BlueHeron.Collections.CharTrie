@@ -14,6 +14,7 @@ See [Trietest.cs](https://github.com/TheBlueHeron/BlueHeron.Collections.CharTrie
 ## Benchmark ([history](BENCHMARKS.md))
 
 ### TestContext Messages:
+
 |----------|---------|------------|
 |  Object  | # Nodes |       Size |<-- Using diagnostic tools snapshot
 |----------|---------|------------|
