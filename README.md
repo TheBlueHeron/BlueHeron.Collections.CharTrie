@@ -15,8 +15,10 @@ See [Trietest.cs](https://github.com/TheBlueHeron/BlueHeron.Collections.CharTrie
 
 ### TestContext Messages:
 
+Using diagnostic tools snapshot:
+
 |----------|---------|------------|
-|  Object  | # Nodes |       Size |<-- Using diagnostic tools snapshot
+|  Object  | # Nodes |       Size |
 |----------|---------|------------|
 |     List |  343075 | 20482984 B |
 |----------|---------|------------|
