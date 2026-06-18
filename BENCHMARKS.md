@@ -11,6 +11,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |   Trie | 521145407 |
 |--------|-----------|
 
+
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
@@ -35,6 +36,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |   Trie |  657762848 B |
 |--------|--------------|
 
+
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
@@ -58,6 +60,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |--------|--------------|
 |   Trie |  657769472 B |
 |--------|--------------|
+
 
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
@@ -84,6 +87,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |   Trie |    1201451 |  623497768 B |
 |--------|------------|--------------|
 
+
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
@@ -107,6 +111,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |--------|------------|--------------|
 |   Trie |    1201451 |  610693808 B |
 |--------|------------|--------------|
+
 
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
@@ -132,6 +137,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |   Trie |    1201446 |  397864528 B | <!-- 35% reduction, but still large
 |--------|------------|--------------|
 
+
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
@@ -155,6 +161,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |--------|------------|--------------|
 |   Trie |    1128187 |  339475680 B | <!-- 45% reduction, but still large
 |--------|------------|--------------|
+
 
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
@@ -181,6 +188,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |--------|------------|--------------|
 |   ChTr |    1128187 |  342856080 B |
 |--------|------------|--------------|
+
 
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
@@ -210,6 +218,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |   ChTr |    1128187 |  237831416 B | <! still too large
 |--------|------------|--------------|
 
+
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
@@ -233,6 +242,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |--------|------------|--------------|
 |   ChTr |    1128187 |  237831416 B |
 |--------|------------|--------------|
+
 
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
@@ -258,8 +268,9 @@ The memory usage values below were calculated in a very crude way that is not gu
 |--------|------------|--------------|
 |   List |     343075 |   24690464 B |
 |--------|------------|--------------|
-|   ChTr |     196782 |   54209208 B | <! Finally acceptable!
+|   ChTr |     196782 |   54209208 B | <! # nodes finally acceptable!
 |--------|------------|--------------|
+
 
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
@@ -287,6 +298,7 @@ The memory usage values below were calculated in a very crude way that is not gu
 |--------|------------|--------------|
 |   ChTr |     196782 |   54509924 B |
 |--------|------------|--------------|
+
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|
 |            Operation | # Runs | Minimum (µsec.) | Maximum (µsec.) | Average (µsec.) | Median (µsec.) |
 |----------------------|--------|-----------------|-----------------|-----------------|----------------|

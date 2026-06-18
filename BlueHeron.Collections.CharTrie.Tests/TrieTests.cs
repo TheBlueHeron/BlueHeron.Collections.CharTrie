@@ -341,14 +341,11 @@ public class D_BenchMarking
             using var reader = new FileInfo("dictionaries\\nl.dic").OpenText(); // load list of words
             string? line;
 
-            while (!reader.EndOfStream)
+            while ((line = await reader.ReadLineAsync(TestContext.CancellationToken)) != null)
             {
-                line = reader.ReadLine();
-                if (line != null)
-                {
-                    lstWords.Add(line);
-                }
+                lstWords.Add(line);
             }
+
             GC.Collect();
             GC.GetTotalMemory(true);
             var listMem = GC.GetAllocatedBytesForCurrentThread() - startMemory;
