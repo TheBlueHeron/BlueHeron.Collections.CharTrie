@@ -1,5 +1,14 @@
 ﻿# BlueHeron.Collections.CharTrie
 
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![C#](https://img.shields.io/badge/C%23-14.0-239120?logo=csharp)](https://learn.microsoft.com/en-us/dotnet/csharp/)
+[![Platform](https://img.shields.io/badge/platform-Windows-0078D4?logo=windows)](https://www.microsoft.com/windows)
+[![Stars](https://img.shields.io/github/stars/TheBlueHeron/BlueHeron.Collections.CharTrie?style=flat)](https://github.com/TheBlueHeron/BlueHeron.Collections.CharTrie/stargazers)
+[![Forks](https://img.shields.io/github/forks/TheBlueHeron/BlueHeron.Collections.CharTrie?style=flat)](https://github.com/TheBlueHeron/BlueHeron.Collections.CharTrie/network)
+[![Issues](https://img.shields.io/github/issues/TheBlueHeron/BlueHeron.Collections.CharTrie)](https://github.com/TheBlueHeron/BlueHeron.Collections.CharTrie/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/TheBlueHeron/BlueHeron.Collections.CharTrie/master)](https://github.com/TheBlueHeron/BlueHeron.Collections.CharTrie/commits/master)
+[![License](https://img.shields.io/github/license/TheBlueHeron/BlueHeron.Collections.CharTrie)](https://github.com/TheBlueHeron/BlueHeron.Collections.CharTrie/blob/master/License.txt)
+
 ## Introduction
 
 The CharTrie is a combination of a Trie and a directed acyclic word graph (DAWG) that results in a very compact representation of a list of words that allows for very fast search operations.
